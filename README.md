@@ -62,6 +62,32 @@ Tests unitarios:
 ./gradlew testDebugUnitTest
 ```
 
+## Release interna
+
+Scripts disponibles:
+
+- `./scripts/update_fastlane_changelog.sh`
+- `./scripts/release.sh`
+
+Ejemplos:
+
+```bash
+./scripts/update_fastlane_changelog.sh
+./scripts/release.sh
+./scripts/release.sh --tag
+./scripts/release.sh --tag --github-release
+```
+
+`update_fastlane_changelog.sh` genera o actualiza el archivo:
+
+- `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`
+
+tomando la seccion correspondiente de `CHANGELOG.md`.
+
+`release.sh` hace checks basicos, sincroniza el changelog de fastlane,
+ejecuta tests unitarios, genera el APK release y opcionalmente crea tag
+y release en GitHub.
+
 APK de debug:
 
 - `app/build/outputs/apk/debug/app-debug.apk`
@@ -69,6 +95,25 @@ APK de debug:
 ## Licencia
 
 Este proyecto se distribuye bajo `Apache-2.0`.
+
+## Privacidad
+
+Minilauncher no incluye anuncios, trackers ni analitica de terceros.
+
+La app:
+
+- no requiere cuenta de usuario
+- no envia datos personales a servidores externos
+- no comparte informacion con terceros
+- guarda solo preferencias locales del launcher en el dispositivo
+
+Ejemplos de datos locales guardados:
+
+- idioma seleccionado
+- orden y listado de favoritas
+- ajustes necesarios para el funcionamiento del launcher
+
+Los recordatorios de uso se generan localmente en el dispositivo.
 
 ## F-Droid
 
