@@ -1,6 +1,6 @@
 # Minilauncher
 
-Launcher minimalista para Android, pensado para reducir friccion, ruido visual y uso impulsivo del telefono.
+Launcher minimalista para Android, pensado para reducir fricción, ruido visual y uso impulsivo del teléfono.
 
 ## Estado
 
@@ -8,11 +8,11 @@ Version actual: `0.1.0`
 
 Incluye:
 
-- home minimalista con reloj, fecha y aro de bateria
+- home minimalista con reloj, fecha y aro de batería
 - apertura de alarmas al tocar el reloj
 - pantalla lateral con todas las aplicaciones
 - favoritas persistentes en la home
-- accesos fijos a telefono y camara
+- accesos fijos a teléfono y cámara
 - filtro en home y en listado de apps
 - pausa consciente antes de abrir apps
 - recordatorio local opcional tras el tiempo elegido
