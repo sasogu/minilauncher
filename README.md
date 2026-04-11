@@ -4,7 +4,9 @@ Launcher minimalista para Android, pensado para reducir fricción, ruido visual 
 
 ## Estado
 
-Version actual: `0.1.0`
+Version publicada: `0.1.0`
+
+Proxima version en desarrollo: `0.2.0`
 
 Incluye:
 
@@ -16,6 +18,15 @@ Incluye:
 - filtro en home y en listado de apps
 - pausa consciente antes de abrir apps
 - recordatorio local opcional tras el tiempo elegido
+- idioma configurable por usuario (espanol, valenciano e ingles)
+
+## Idiomas
+
+- Espanol (`es`)
+- Valenciano (`ca`)
+- Ingles (`en`)
+
+El idioma se puede cambiar desde la pantalla de aplicaciones.
 
 ## Stack
 
@@ -36,6 +47,13 @@ APK de debug:
 ## Licencia
 
 Este proyecto se distribuye bajo `Apache-2.0`.
+
+## F-Droid
+
+Release publicada para inicio de alta en F-Droid:
+
+- tag: `v0.1.0`
+- release: `https://github.com/sasogu/minilauncher/releases/tag/v0.1.0`
 
 
 ## Roadmap
