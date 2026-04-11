@@ -1,0 +1,13 @@
+Minilauncher es un launcher minimalista para Android orientado a reducir friccion, distracciones y uso impulsivo del telefono.
+
+La interfaz se centra en mostrar solo lo necesario:
+
+- reloj y fecha en la pantalla principal
+- aro visual con el nivel de bateria
+- accesos fijos a telefono y camara
+- favoritas persistentes en la home
+- pantalla separada para el listado completo de aplicaciones
+
+Incluye una pequena pausa consciente antes de abrir aplicaciones, donde puedes indicar cuanto tiempo piensas usar cada una. Si eliges una duracion, la app programa un recordatorio local para ayudarte a tomar conciencia del tiempo de uso.
+
+No incluye rastreadores, anuncios ni dependencias de Google Play Services.

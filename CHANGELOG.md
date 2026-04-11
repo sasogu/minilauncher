@@ -1,0 +1,12 @@
+# Changelog
+
+## 0.1.0
+
+- Primera version publica del launcher.
+- Home minimalista con reloj, fecha y aro de bateria.
+- Apertura de alarmas al tocar el reloj.
+- Pantalla separada para todas las aplicaciones.
+- Favoritas persistentes en la home.
+- Accesos fijos a telefono y camara.
+- Dialogo de intencion de uso antes de abrir apps.
+- Recordatorio local opcional tras el tiempo elegido.

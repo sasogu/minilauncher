@@ -1,48 +1,65 @@
 # Minilauncher
 
-Launcher minimalista para Android inspirado en una interfaz sobria, enfocada en reducir friccion, distracciones y ruido visual.
+Launcher minimalista para Android, pensado para reducir friccion, ruido visual y uso impulsivo del telefono.
 
-## Direccion del proyecto
+## Estado
 
-Aunque el repositorio empezo con idea de Flutter, la recomendacion actual es construir el launcher en:
+Version actual: `0.1.0`
+
+Incluye:
+
+- home minimalista con reloj, fecha y aro de bateria
+- apertura de alarmas al tocar el reloj
+- pantalla lateral con todas las aplicaciones
+- favoritas persistentes en la home
+- accesos fijos a telefono y camara
+- filtro en home y en listado de apps
+- pausa consciente antes de abrir apps
+- recordatorio local opcional tras el tiempo elegido
+
+## Stack
 
 - Kotlin
 - Jetpack Compose
+- Android nativo
 
-Esto permite una integracion mucho mas solida con Android para funciones clave como:
+## Build local
 
-- registro como launcher por defecto
-- listado de apps instaladas
-- apertura rapida de aplicaciones
-- futuras funciones avanzadas de personalizacion y control de uso
+```bash
+./gradlew assembleDebug
+```
 
-## Objetivo del MVP
+APK de debug:
 
-El MVP debe incluir:
+- `app/build/outputs/apk/debug/app-debug.apk`
 
-- Home minimalista con reloj y fecha
-- Lista de apps con busqueda instantanea
-- Apertura de aplicaciones instaladas
-- Ajustes basicos persistentes
-- Onboarding simple inspirado en las capturas de `images`
+## Licencia
+
+Este proyecto se distribuye bajo `Apache-2.0`.
+
+## F-Droid
+
+El repositorio ya incluye base para publicacion en F-Droid:
+
+- licencia en `LICENSE`
+- metadatos en `fastlane/metadata/android/en-US/`
+- changelog inicial
+
+Queda pendiente:
+
+- publicar el repositorio en GitHub o GitLab
+- crear un tag de release, por ejemplo `v0.1.0`
+- preparar icono y capturas definitivas
+- enviar metadata a `fdroiddata`
 
 ## Referencias visuales
 
-Las capturas base del proyecto estan en:
+Las capturas de referencia originales estan en:
 
 - `images/`
 
-## Backlog
+## Roadmap
 
-La hoja de ruta tecnica actual esta en:
+La hoja de ruta tecnica vive en:
 
 - `BACKLOG_LAUNCHER.md`
-
-## Siguiente direccion tecnica
-
-El siguiente paso recomendado es crear la base del proyecto Android nativo con Jetpack Compose y empezar por:
-
-1. Bootstrap del proyecto
-2. Tema visual minimalista
-3. Registro como launcher
-4. Lista de apps y busqueda

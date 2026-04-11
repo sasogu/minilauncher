@@ -1,0 +1,8 @@
+Initial public release.
+
+- Minimal home with time, date and battery ring
+- Favorite apps on the home screen
+- Full app list on a separate page
+- Fixed phone and camera shortcuts
+- Intentional-use prompt before launching apps
+- Optional local reminder after the selected time
