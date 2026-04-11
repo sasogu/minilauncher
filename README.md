@@ -37,26 +37,6 @@ APK de debug:
 
 Este proyecto se distribuye bajo `Apache-2.0`.
 
-## F-Droid
-
-El repositorio ya incluye base para publicacion en F-Droid:
-
-- licencia en `LICENSE`
-- metadatos en `fastlane/metadata/android/en-US/`
-- changelog inicial
-
-Queda pendiente:
-
-- publicar el repositorio en GitHub o GitLab
-- crear un tag de release, por ejemplo `v0.1.0`
-- preparar icono y capturas definitivas
-- enviar metadata a `fdroiddata`
-
-## Referencias visuales
-
-Las capturas de referencia originales estan en:
-
-- `images/`
 
 ## Roadmap
 
