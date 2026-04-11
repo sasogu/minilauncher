@@ -14,11 +14,13 @@ Incluye:
 - apertura de alarmas al tocar el reloj
 - pantalla lateral con todas las aplicaciones
 - favoritas persistentes en la home
+- pulsación larga en favoritas para moverlas al inicio
 - accesos fijos a teléfono y cámara
 - filtro en home y en listado de apps
 - pausa consciente antes de abrir apps
 - recordatorio local opcional tras el tiempo elegido
 - idioma configurable por usuario (espanol, valenciano e ingles)
+- cache de iconos y carga incremental de aplicaciones
 
 ## Idiomas
 
@@ -33,11 +35,31 @@ El idioma se puede cambiar desde la pantalla de aplicaciones.
 - Kotlin
 - Jetpack Compose
 - Android nativo
+- DataStore Preferences
+- JUnit para tests unitarios
+
+## Arquitectura
+
+La lógica de estado se está separando progresivamente de la UI.
+
+Actualmente:
+
+- la UI principal vive en `MainActivity`
+- el estado y la lógica de datos del launcher viven en `LauncherState.kt`
+- preferencias persistentes usan `DataStore`
+
+Esto facilita pruebas, mantenimiento y futuras features.
 
 ## Build local
 
 ```bash
 ./gradlew assembleDebug
+```
+
+Tests unitarios:
+
+```bash
+./gradlew testDebugUnitTest
 ```
 
 APK de debug:

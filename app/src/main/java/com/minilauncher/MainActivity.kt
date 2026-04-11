@@ -104,17 +104,15 @@ import java.util.Date
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
-    private val launcherPreferences by lazy { getSharedPreferences("launcher_prefs", MODE_PRIVATE) }
     private val appsRepository by lazy { AppsRepository(packageManager) }
-    private val favoritesStore by lazy { FavoritesStore(launcherPreferences) }
+    private val favoritesStore by lazy { FavoritesStore(applicationContext.launcherDataStore) }
     private val launcherStateStore by lazy { LauncherStateStore(appsRepository, favoritesStore) }
-    private val languageStore by lazy { LanguageStore(launcherPreferences) }
+    private val languageStore by lazy { LanguageStore(applicationContext.launcherDataStore) }
     private val uiState = MutableStateFlow(LauncherUiState())
     private var loadAppsJob: Job? = null
 
     override fun attachBaseContext(newBase: Context) {
-        val preferences = newBase.getSharedPreferences("launcher_prefs", MODE_PRIVATE)
-        val language = LanguageStore(preferences).loadLanguage()
+        val language = LanguageStore(newBase.launcherDataStore).loadLanguageBlocking()
         super.attachBaseContext(newBase.withAppLanguage(language))
     }
 
@@ -128,7 +126,7 @@ class MainActivity : ComponentActivity() {
         }
         enterImmersiveMode()
 
-        val language = languageStore.loadLanguage()
+        val language = languageStore.loadLanguageBlocking()
         uiState.value = uiState.value.copy(selectedLanguage = language)
 
         loadApps()
@@ -180,9 +178,11 @@ class MainActivity : ComponentActivity() {
         val currentLanguage = uiState.value.selectedLanguage
         if (currentLanguage == language) return
 
-        languageStore.saveLanguage(language)
-        uiState.value = uiState.value.copy(selectedLanguage = language)
-        recreate()
+        lifecycleScope.launch {
+            languageStore.saveLanguage(language)
+            uiState.value = uiState.value.copy(selectedLanguage = language)
+            recreate()
+        }
     }
 
     private fun loadApps() {
@@ -193,11 +193,15 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun toggleFavorite(app: LaunchableApp) {
-        uiState.value = launcherStateStore.toggleFavorite(uiState.value, app)
+        lifecycleScope.launch {
+            uiState.value = launcherStateStore.toggleFavorite(uiState.value, app)
+        }
     }
 
     private fun promoteFavorite(app: LaunchableApp) {
-        uiState.value = launcherStateStore.promoteFavorite(uiState.value, app)
+        lifecycleScope.launch {
+            uiState.value = launcherStateStore.promoteFavorite(uiState.value, app)
+        }
     }
 
     private fun openApp(app: LaunchableApp) {

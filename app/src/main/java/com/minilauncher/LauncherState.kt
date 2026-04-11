@@ -1,13 +1,16 @@
 package com.minilauncher
 
 import android.content.Intent
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.graphics.Bitmap
 import androidx.collection.LruCache
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.text.Normalizer
 import java.util.Locale
@@ -42,11 +45,11 @@ class LauncherStateStore(
         return state.copy(homeQuery = query)
     }
 
-    fun toggleFavorite(state: LauncherUiState, app: LaunchableApp): LauncherUiState {
+    suspend fun toggleFavorite(state: LauncherUiState, app: LaunchableApp): LauncherUiState {
         return state.copy(favoritePackages = favoritesStore.toggle(app.packageName))
     }
 
-    fun promoteFavorite(state: LauncherUiState, app: LaunchableApp): LauncherUiState {
+    suspend fun promoteFavorite(state: LauncherUiState, app: LaunchableApp): LauncherUiState {
         return state.copy(favoritePackages = favoritesStore.promote(app.packageName))
     }
 
@@ -113,23 +116,22 @@ object AppIconCache {
 }
 
 class FavoritesStore(
-    private val preferences: SharedPreferences,
+    private val dataStore: DataStore<Preferences>,
 ) {
-    fun loadFavorites(): List<String> {
-        val ordered = preferences.getString(FAVORITES_ORDER_KEY, null)
+    suspend fun loadFavorites(): List<String> {
+        val ordered = dataStore.safeData()
+            .map { preferences -> preferences[LauncherPreferenceKeys.favoritePackagesOrder] }
+            .first()
             ?.split(FAVORITES_SEPARATOR)
             ?.map { it.trim() }
             ?.filter { it.isNotBlank() }
             ?.distinct()
         if (!ordered.isNullOrEmpty()) return ordered
 
-        return preferences.getStringSet(FAVORITES_KEY, emptySet())
-            .orEmpty()
-            .toList()
-            .sorted()
+        return emptyList()
     }
 
-    fun toggle(packageName: String): List<String> {
+    suspend fun toggle(packageName: String): List<String> {
         val current = loadFavorites().toMutableList()
         if (current.contains(packageName)) {
             current.remove(packageName)
@@ -139,7 +141,7 @@ class FavoritesStore(
         return save(current)
     }
 
-    fun promote(packageName: String): List<String> {
+    suspend fun promote(packageName: String): List<String> {
         val current = loadFavorites().toMutableList()
         val index = current.indexOf(packageName)
         if (index <= 0) return current
@@ -148,18 +150,16 @@ class FavoritesStore(
         return save(current)
     }
 
-    private fun save(values: List<String>): List<String> {
+    private suspend fun save(values: List<String>): List<String> {
         val cleaned = values.map { it.trim() }.filter { it.isNotBlank() }.distinct()
-        preferences.edit()
-            .putString(FAVORITES_ORDER_KEY, cleaned.joinToString(FAVORITES_SEPARATOR))
-            .putStringSet(FAVORITES_KEY, cleaned.toSet())
-            .apply()
+        dataStore.writeString(
+            LauncherPreferenceKeys.favoritePackagesOrder,
+            cleaned.joinToString(FAVORITES_SEPARATOR),
+        )
         return cleaned
     }
 
     private companion object {
-        const val FAVORITES_KEY = "favorite_packages"
-        const val FAVORITES_ORDER_KEY = "favorite_packages_order"
         const val FAVORITES_SEPARATOR = "|"
     }
 }

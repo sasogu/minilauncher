@@ -14,8 +14,7 @@ import androidx.core.content.ContextCompat
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        val preferences = context.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
-        val language = LanguageStore(preferences).loadLanguage()
+        val language = LanguageStore(context.launcherDataStore).loadLanguageBlocking()
         val localizedContext = context.withAppLanguage(language)
 
         ensureChannel(localizedContext)

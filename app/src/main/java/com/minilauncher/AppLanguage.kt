@@ -1,7 +1,9 @@
 package com.minilauncher
 
 import android.content.Context
-import android.content.SharedPreferences
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import kotlinx.coroutines.runBlocking
 import java.util.Locale
 
 enum class AppLanguage(
@@ -25,19 +27,19 @@ enum class AppLanguage(
 }
 
 class LanguageStore(
-    private val preferences: SharedPreferences,
+    private val dataStore: DataStore<Preferences>,
 ) {
-    fun loadLanguage(): AppLanguage {
-        val tag = preferences.getString(LANGUAGE_KEY, AppLanguage.SPANISH.localeTag)
+    suspend fun loadLanguage(): AppLanguage {
+        val tag = dataStore.readString(LauncherPreferenceKeys.languageTag, AppLanguage.SPANISH.localeTag)
         return AppLanguage.fromTag(tag)
     }
 
-    fun saveLanguage(language: AppLanguage) {
-        preferences.edit().putString(LANGUAGE_KEY, language.localeTag).apply()
+    fun loadLanguageBlocking(): AppLanguage = runBlocking {
+        loadLanguage()
     }
 
-    private companion object {
-        const val LANGUAGE_KEY = "language_tag"
+    suspend fun saveLanguage(language: AppLanguage) {
+        dataStore.writeString(LauncherPreferenceKeys.languageTag, language.localeTag)
     }
 }
 
