@@ -7,10 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.content.pm.ResolveInfo
-import android.graphics.Bitmap
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
@@ -90,7 +87,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.collection.LruCache
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
@@ -103,7 +99,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.Normalizer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -112,6 +107,7 @@ class MainActivity : ComponentActivity() {
     private val launcherPreferences by lazy { getSharedPreferences("launcher_prefs", MODE_PRIVATE) }
     private val appsRepository by lazy { AppsRepository(packageManager) }
     private val favoritesStore by lazy { FavoritesStore(launcherPreferences) }
+    private val launcherStateStore by lazy { LauncherStateStore(appsRepository, favoritesStore) }
     private val languageStore by lazy { LanguageStore(launcherPreferences) }
     private val uiState = MutableStateFlow(LauncherUiState())
     private var loadAppsJob: Job? = null
@@ -173,15 +169,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun onQueryChange(query: String) {
-        val current = uiState.value
-        uiState.value = current.copy(
-            query = query,
-            filteredApps = filterApps(current.allApps, query),
-        )
+        uiState.value = launcherStateStore.onQueryChange(uiState.value, query)
     }
 
     private fun onHomeQueryChange(query: String) {
-        uiState.value = uiState.value.copy(homeQuery = query)
+        uiState.value = launcherStateStore.onHomeQueryChange(uiState.value, query)
     }
 
     private fun onLanguageChange(language: AppLanguage) {
@@ -196,42 +188,16 @@ class MainActivity : ComponentActivity() {
     private fun loadApps() {
         loadAppsJob?.cancel()
         loadAppsJob = lifecycleScope.launch(Dispatchers.IO) {
-            val apps = appsRepository.loadLaunchableApps()
-            val current = uiState.value
-            val query = current.query
-            val favorites = favoritesStore.loadFavorites()
-
-            // Emit batches so the app list becomes usable earlier on large devices.
-            apps.chunked(32).runningFold(emptyList<LaunchableApp>()) { acc, chunk -> acc + chunk }
-                .drop(1)
-                .forEach { partialApps ->
-                    val stateNow = uiState.value
-                    val activeQuery = stateNow.query
-                    uiState.value = stateNow.copy(
-                        allApps = partialApps,
-                        filteredApps = filterApps(partialApps, activeQuery),
-                        favoritePackages = favorites,
-                    )
-                }
-
-            // Ensure final state keeps the latest query/home query values if user typed during load.
-            val stateNow = uiState.value
-            uiState.value = stateNow.copy(
-                allApps = apps,
-                filteredApps = filterApps(apps, stateNow.query),
-                favoritePackages = favorites,
-            )
+            launcherStateStore.loadApps(uiState)
         }
     }
 
     private fun toggleFavorite(app: LaunchableApp) {
-        val updatedFavorites = favoritesStore.toggle(app.packageName)
-        uiState.value = uiState.value.copy(favoritePackages = updatedFavorites)
+        uiState.value = launcherStateStore.toggleFavorite(uiState.value, app)
     }
 
     private fun promoteFavorite(app: LaunchableApp) {
-        val updatedFavorites = favoritesStore.promote(app.packageName)
-        uiState.value = uiState.value.copy(favoritePackages = updatedFavorites)
+        uiState.value = launcherStateStore.promoteFavorite(uiState.value, app)
     }
 
     private fun openApp(app: LaunchableApp) {
@@ -314,125 +280,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-}
-
-data class LauncherUiState(
-    val query: String = "",
-    val homeQuery: String = "",
-    val allApps: List<LaunchableApp> = emptyList(),
-    val filteredApps: List<LaunchableApp> = emptyList(),
-    val favoritePackages: List<String> = emptyList(),
-    val pendingLaunchApp: LaunchableApp? = null,
-    val selectedLanguage: AppLanguage = AppLanguage.SPANISH,
-)
-
-data class LaunchableApp(
-    val label: String,
-    val packageName: String,
-)
-
-private class AppsRepository(
-    private val packageManager: PackageManager,
-) {
-    fun loadLaunchableApps(): List<LaunchableApp> {
-        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        @Suppress("DEPRECATION")
-        val apps: List<ResolveInfo> = packageManager.queryIntentActivities(intent, 0)
-
-        return apps
-            .mapNotNull { resolveInfo ->
-                val packageName = resolveInfo.activityInfo?.packageName ?: return@mapNotNull null
-                val label = resolveInfo.loadLabel(packageManager)?.toString()?.trim().orEmpty()
-                if (label.isBlank()) return@mapNotNull null
-
-                LaunchableApp(
-                    label = label,
-                    packageName = packageName,
-                )
-            }
-            .distinctBy { it.packageName }
-            .sortedBy { normalize(it.label) }
-    }
-}
-
-private object AppIconCache {
-    private val cache = LruCache<String, Bitmap>(200)
-
-    fun get(packageName: String): Bitmap? = cache.get(packageName)
-
-    fun put(packageName: String, bitmap: Bitmap) {
-        cache.put(packageName, bitmap)
-    }
-}
-
-private class FavoritesStore(
-    private val preferences: SharedPreferences,
-) {
-    fun loadFavorites(): List<String> {
-        val ordered = preferences.getString(FAVORITES_ORDER_KEY, null)
-            ?.split(FAVORITES_SEPARATOR)
-            ?.map { it.trim() }
-            ?.filter { it.isNotBlank() }
-            ?.distinct()
-        if (!ordered.isNullOrEmpty()) return ordered
-
-        return preferences.getStringSet(FAVORITES_KEY, emptySet())
-            .orEmpty()
-            .toList()
-            .sorted()
-    }
-
-    fun toggle(packageName: String): List<String> {
-        val current = loadFavorites().toMutableList()
-        if (current.contains(packageName)) {
-            current.remove(packageName)
-        } else {
-            current.add(0, packageName)
-        }
-        return save(current)
-    }
-
-    fun promote(packageName: String): List<String> {
-        val current = loadFavorites().toMutableList()
-        val index = current.indexOf(packageName)
-        if (index <= 0) return current
-        current.removeAt(index)
-        current.add(0, packageName)
-        return save(current)
-    }
-
-    private fun save(values: List<String>): List<String> {
-        val cleaned = values.map { it.trim() }.filter { it.isNotBlank() }.distinct()
-        preferences.edit()
-            .putString(FAVORITES_ORDER_KEY, cleaned.joinToString(FAVORITES_SEPARATOR))
-            .putStringSet(FAVORITES_KEY, cleaned.toSet())
-            .apply()
-        return cleaned
-    }
-
-    private companion object {
-        const val FAVORITES_KEY = "favorite_packages"
-        const val FAVORITES_ORDER_KEY = "favorite_packages_order"
-        const val FAVORITES_SEPARATOR = "|"
-    }
-}
-
-private fun filterApps(
-    apps: List<LaunchableApp>,
-    query: String,
-): List<LaunchableApp> {
-    if (query.isBlank()) return apps
-    val normalizedQuery = normalize(query)
-    return apps.filter { app ->
-        normalize(app.label).contains(normalizedQuery) ||
-            app.packageName.lowercase(Locale.ROOT).contains(normalizedQuery)
-    }
-}
-
-private fun normalize(value: String): String {
-    return Normalizer.normalize(value, Normalizer.Form.NFD)
-        .replace("\\p{Mn}+".toRegex(), "")
-        .lowercase(Locale.ROOT)
 }
 
 @Composable
