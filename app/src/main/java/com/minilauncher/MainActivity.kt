@@ -10,6 +10,7 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.graphics.Bitmap
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
@@ -65,8 +66,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -88,16 +90,19 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.collection.LruCache
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.Normalizer
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -109,6 +114,7 @@ class MainActivity : ComponentActivity() {
     private val favoritesStore by lazy { FavoritesStore(launcherPreferences) }
     private val languageStore by lazy { LanguageStore(launcherPreferences) }
     private val uiState = MutableStateFlow(LauncherUiState())
+    private var loadAppsJob: Job? = null
 
     override fun attachBaseContext(newBase: Context) {
         val preferences = newBase.getSharedPreferences("launcher_prefs", MODE_PRIVATE)
@@ -188,17 +194,32 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun loadApps() {
-        lifecycleScope.launch(Dispatchers.IO) {
+        loadAppsJob?.cancel()
+        loadAppsJob = lifecycleScope.launch(Dispatchers.IO) {
             val apps = appsRepository.loadLaunchableApps()
             val current = uiState.value
             val query = current.query
-            uiState.value = LauncherUiState(
-                query = query,
-                homeQuery = current.homeQuery,
+            val favorites = favoritesStore.loadFavorites()
+
+            // Emit batches so the app list becomes usable earlier on large devices.
+            apps.chunked(32).runningFold(emptyList<LaunchableApp>()) { acc, chunk -> acc + chunk }
+                .drop(1)
+                .forEach { partialApps ->
+                    val stateNow = uiState.value
+                    val activeQuery = stateNow.query
+                    uiState.value = stateNow.copy(
+                        allApps = partialApps,
+                        filteredApps = filterApps(partialApps, activeQuery),
+                        favoritePackages = favorites,
+                    )
+                }
+
+            // Ensure final state keeps the latest query/home query values if user typed during load.
+            val stateNow = uiState.value
+            uiState.value = stateNow.copy(
                 allApps = apps,
-                filteredApps = filterApps(apps, query),
-                favoritePackages = favoritesStore.loadFavorites(),
-                selectedLanguage = current.selectedLanguage,
+                filteredApps = filterApps(apps, stateNow.query),
+                favoritePackages = favorites,
             )
         }
     }
@@ -331,6 +352,16 @@ private class AppsRepository(
             }
             .distinctBy { it.packageName }
             .sortedBy { normalize(it.label) }
+    }
+}
+
+private object AppIconCache {
+    private val cache = LruCache<String, Bitmap>(200)
+
+    fun get(packageName: String): Bitmap? = cache.get(packageName)
+
+    fun put(packageName: String, bitmap: Bitmap) {
+        cache.put(packageName, bitmap)
     }
 }
 
@@ -932,8 +963,25 @@ private fun AppNameRow(
 ) {
     val context = LocalContext.current
     val packageManager = context.packageManager
-    val iconBitmap = remember(app.packageName) {
-        packageManager.getApplicationIcon(app.packageName).toBitmap().asImageBitmap()
+    val iconBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(
+        initialValue = null,
+        key1 = app.packageName,
+    ) {
+        AppIconCache.get(app.packageName)?.let {
+            value = it.asImageBitmap()
+            return@produceState
+        }
+
+        val bitmap = withContext(Dispatchers.IO) {
+            runCatching {
+                packageManager.getApplicationIcon(app.packageName).toBitmap()
+            }.getOrNull()
+        }
+
+        if (bitmap != null) {
+            AppIconCache.put(app.packageName, bitmap)
+            value = bitmap.asImageBitmap()
+        }
     }
 
     Row(
@@ -946,11 +994,19 @@ private fun AppNameRow(
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Image(
-            bitmap = iconBitmap,
-            contentDescription = null,
-            modifier = Modifier.size(28.dp),
-        )
+        if (iconBitmap != null) {
+            Image(
+                bitmap = iconBitmap!!,
+                contentDescription = null,
+                modifier = Modifier.size(28.dp),
+            )
+        } else {
+            Spacer(
+                modifier = Modifier
+                    .size(28.dp)
+                    .background(Color(0xFF2A2A2A), RoundedCornerShape(8.dp)),
+            )
+        }
         Spacer(modifier = Modifier.size(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
