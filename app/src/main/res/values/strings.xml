@@ -3,6 +3,10 @@
     <string name="apps_title">Aplicaciones</string>
     <string name="apps_card_title">Apps</string>
     <string name="apps_count">%1$d aplicaciones</string>
+    <string name="home_empty_title">No tienes favoritas todavia</string>
+    <string name="home_empty_subtitle">Marca tus apps mas usadas para tenerlas aqui.</string>
+    <string name="home_empty_cta">Anadir favoritas</string>
+    <string name="favorite_limit_reached">Solo puedes fijar %1$d aplicaciones.</string>
     <string name="search_placeholder">Buscar aplicacion</string>
     <string name="no_apps_found">No se encontraron aplicaciones.</string>
     <string name="no_results_for">No hay resultados para \"%1$s\".</string>

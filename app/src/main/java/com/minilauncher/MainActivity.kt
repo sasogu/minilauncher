@@ -21,9 +21,11 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -67,6 +69,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -135,6 +138,7 @@ class MainActivity : ComponentActivity() {
                     onAppClick = ::promptAppLaunch,
                     onClockClick = ::openAlarms,
                     onToggleFavorite = ::toggleFavorite,
+                    onPromoteFavorite = ::promoteFavorite,
                     onPhoneClick = ::openPhone,
                     onCameraClick = ::openCamera,
                     onLaunchDismiss = ::dismissLaunchPrompt,
@@ -198,6 +202,11 @@ class MainActivity : ComponentActivity() {
 
     private fun toggleFavorite(app: LaunchableApp) {
         val updatedFavorites = favoritesStore.toggle(app.packageName)
+        uiState.value = uiState.value.copy(favoritePackages = updatedFavorites)
+    }
+
+    private fun promoteFavorite(app: LaunchableApp) {
+        val updatedFavorites = favoritesStore.promote(app.packageName)
         uiState.value = uiState.value.copy(favoritePackages = updatedFavorites)
     }
 
@@ -280,6 +289,7 @@ class MainActivity : ComponentActivity() {
             startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     }
+
 }
 
 data class LauncherUiState(
@@ -287,7 +297,7 @@ data class LauncherUiState(
     val homeQuery: String = "",
     val allApps: List<LaunchableApp> = emptyList(),
     val filteredApps: List<LaunchableApp> = emptyList(),
-    val favoritePackages: Set<String> = emptySet(),
+    val favoritePackages: List<String> = emptyList(),
     val pendingLaunchApp: LaunchableApp? = null,
     val selectedLanguage: AppLanguage = AppLanguage.SPANISH,
 )
@@ -324,21 +334,52 @@ private class AppsRepository(
 private class FavoritesStore(
     private val preferences: SharedPreferences,
 ) {
-    fun loadFavorites(): Set<String> {
-        return preferences.getStringSet(FAVORITES_KEY, emptySet()).orEmpty().toSet()
+    fun loadFavorites(): List<String> {
+        val ordered = preferences.getString(FAVORITES_ORDER_KEY, null)
+            ?.split(FAVORITES_SEPARATOR)
+            ?.map { it.trim() }
+            ?.filter { it.isNotBlank() }
+            ?.distinct()
+        if (!ordered.isNullOrEmpty()) return ordered
+
+        return preferences.getStringSet(FAVORITES_KEY, emptySet())
+            .orEmpty()
+            .toList()
+            .sorted()
     }
 
-    fun toggle(packageName: String): Set<String> {
-        val current = loadFavorites().toMutableSet()
-        if (!current.add(packageName)) {
+    fun toggle(packageName: String): List<String> {
+        val current = loadFavorites().toMutableList()
+        if (current.contains(packageName)) {
             current.remove(packageName)
+        } else {
+            current.add(0, packageName)
         }
-        preferences.edit().putStringSet(FAVORITES_KEY, current).apply()
-        return current.toSet()
+        return save(current)
+    }
+
+    fun promote(packageName: String): List<String> {
+        val current = loadFavorites().toMutableList()
+        val index = current.indexOf(packageName)
+        if (index <= 0) return current
+        current.removeAt(index)
+        current.add(0, packageName)
+        return save(current)
+    }
+
+    private fun save(values: List<String>): List<String> {
+        val cleaned = values.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+        preferences.edit()
+            .putString(FAVORITES_ORDER_KEY, cleaned.joinToString(FAVORITES_SEPARATOR))
+            .putStringSet(FAVORITES_KEY, cleaned.toSet())
+            .apply()
+        return cleaned
     }
 
     private companion object {
         const val FAVORITES_KEY = "favorite_packages"
+        const val FAVORITES_ORDER_KEY = "favorite_packages_order"
+        const val FAVORITES_SEPARATOR = "|"
     }
 }
 
@@ -368,6 +409,7 @@ private fun LauncherApp(
     onAppClick: (LaunchableApp) -> Unit,
     onClockClick: () -> Unit,
     onToggleFavorite: (LaunchableApp) -> Unit,
+    onPromoteFavorite: (LaunchableApp) -> Unit,
     onPhoneClick: () -> Unit,
     onCameraClick: () -> Unit,
     onLaunchDismiss: () -> Unit = {},
@@ -375,8 +417,10 @@ private fun LauncherApp(
     onLanguageChange: (AppLanguage) -> Unit = {},
 ) {
     val pagerState = rememberPagerState(initialPage = 0) { 2 }
+    val scope = rememberCoroutineScope()
     val favoriteApps = remember(state.allApps, state.favoritePackages) {
-        state.allApps.filter { it.packageName in state.favoritePackages }
+        val appsByPackage = state.allApps.associateBy { it.packageName }
+        state.favoritePackages.mapNotNull { appsByPackage[it] }
     }
     val filteredFavoriteApps = remember(favoriteApps, state.homeQuery) {
         filterApps(favoriteApps, state.homeQuery)
@@ -396,7 +440,9 @@ private fun LauncherApp(
                     homeQuery = state.homeQuery,
                     onHomeQueryChange = onHomeQueryChange,
                     onAppClick = onAppClick,
+                    onPromoteFavorite = onPromoteFavorite,
                     onClockClick = onClockClick,
+                    onAddFavoritesClick = { scope.launch { pagerState.animateScrollToPage(1) } },
                     onPhoneClick = onPhoneClick,
                     onCameraClick = onCameraClick,
                 )
@@ -427,7 +473,9 @@ private fun HomeScreen(
     homeQuery: String,
     onHomeQueryChange: (String) -> Unit,
     onAppClick: (LaunchableApp) -> Unit,
+    onPromoteFavorite: (LaunchableApp) -> Unit,
     onClockClick: () -> Unit,
+    onAddFavoritesClick: () -> Unit,
     onPhoneClick: () -> Unit,
     onCameraClick: () -> Unit,
 ) {
@@ -452,16 +500,17 @@ private fun HomeScreen(
             }
             if (favoriteApps.isEmpty()) {
                 item {
-                    EmptyFavoritesCard()
+                    EmptyFavoritesCard(onAddFavoritesClick = onAddFavoritesClick)
                 }
             } else {
                 items(
                     items = favoriteApps,
-                    key = { it.packageName },
+                    key = { app -> app.packageName },
                 ) { app ->
                     FavoriteRow(
                         app = app,
                         onClick = { onAppClick(app) },
+                        onLongClick = { onPromoteFavorite(app) },
                     )
                 }
             }
@@ -655,8 +704,36 @@ private fun readBatteryLevel(
 
 @Composable
 private fun EmptyFavoritesCard(
+    onAddFavoritesClick: () -> Unit,
 ) {
-    Spacer(modifier = Modifier.height(220.dp))
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF151515)),
+        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.home_empty_title),
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(R.string.home_empty_subtitle),
+                color = Color(0xFFCFCFCF),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            OutlinedButton(onClick = onAddFavoritesClick) {
+                Text(
+                    text = stringResource(R.string.home_empty_cta),
+                    color = Color.White,
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -801,12 +878,14 @@ private fun EmptyState(query: String) {
 private fun FavoriteRow(
     app: LaunchableApp,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
 ) {
     AppNameRow(
         app = app,
         titleSize = 28.sp,
         showPackage = false,
         onClick = onClick,
+        onLongClick = onLongClick,
         trailing = null,
     )
 }
@@ -823,6 +902,7 @@ private fun AppRow(
         titleSize = 26.sp,
         showPackage = true,
         onClick = onClick,
+        onLongClick = null,
         trailing = {
             IconButton(onClick = onToggleFavorite) {
                 Icon(
@@ -836,11 +916,13 @@ private fun AppRow(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun AppNameRow(
     app: LaunchableApp,
     titleSize: androidx.compose.ui.unit.TextUnit,
     showPackage: Boolean,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     trailing: (@Composable (() -> Unit))?,
 ) {
     val context = LocalContext.current
@@ -852,7 +934,10 @@ private fun AppNameRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+            )
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
