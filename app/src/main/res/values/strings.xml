@@ -1,3 +1,26 @@
 <resources>
     <string name="app_name">Minilauncher</string>
+    <string name="apps_title">Aplicaciones</string>
+    <string name="apps_card_title">Apps</string>
+    <string name="apps_count">%1$d aplicaciones</string>
+    <string name="search_placeholder">Buscar aplicacion</string>
+    <string name="no_apps_found">No se encontraron aplicaciones.</string>
+    <string name="no_results_for">No hay resultados para \"%1$s\".</string>
+
+    <string name="launch_dialog_question">Cuanto tiempo piensas usarla?</string>
+    <string name="duration_5m">5 min</string>
+    <string name="duration_10m">10 min</string>
+    <string name="duration_15m">15 min</string>
+    <string name="duration_30m">30 min</string>
+    <string name="duration_60m">60 min</string>
+    <string name="duration_unlimited">Sin limite</string>
+    <string name="cancel">Cancelar</string>
+
+    <string name="language_picker">Idioma: %1$s</string>
+
+    <string name="reminder_default_app">esta app</string>
+    <string name="reminder_title">Tiempo cumplido</string>
+    <string name="reminder_content">Llevas %1$d min usando %2$s</string>
+    <string name="reminder_channel_name">Recordatorios de uso</string>
+    <string name="reminder_channel_description">Avisos para tomar conciencia del tiempo de uso</string>
 </resources>

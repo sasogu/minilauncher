@@ -14,7 +14,11 @@ import androidx.core.content.ContextCompat
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        ensureChannel(context)
+        val preferences = context.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE)
+        val language = LanguageStore(preferences).loadLanguage()
+        val localizedContext = context.withAppLanguage(language)
+
+        ensureChannel(localizedContext)
 
         if (
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -23,13 +27,15 @@ class ReminderReceiver : BroadcastReceiver() {
             return
         }
 
-        val appLabel = intent.getStringExtra(EXTRA_APP_LABEL).orEmpty().ifBlank { "esta app" }
+        val appLabel = intent.getStringExtra(EXTRA_APP_LABEL).orEmpty().ifBlank {
+            localizedContext.getString(R.string.reminder_default_app)
+        }
         val minutes = intent.getIntExtra(EXTRA_MINUTES, 0)
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val notification = NotificationCompat.Builder(localizedContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_reminder)
-            .setContentTitle("Tiempo cumplido")
-            .setContentText("Llevas $minutes min usando $appLabel")
+            .setContentTitle(localizedContext.getString(R.string.reminder_title))
+            .setContentText(localizedContext.getString(R.string.reminder_content, minutes, appLabel))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .build()
@@ -42,10 +48,10 @@ class ReminderReceiver : BroadcastReceiver() {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Recordatorios de uso",
+            context.getString(R.string.reminder_channel_name),
             NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
-            description = "Avisos para tomar conciencia del tiempo de uso"
+            description = context.getString(R.string.reminder_channel_description)
         }
         manager.createNotificationChannel(channel)
     }

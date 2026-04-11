@@ -78,6 +78,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -100,9 +101,17 @@ import java.util.Date
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
+    private val launcherPreferences by lazy { getSharedPreferences("launcher_prefs", MODE_PRIVATE) }
     private val appsRepository by lazy { AppsRepository(packageManager) }
-    private val favoritesStore by lazy { FavoritesStore(getSharedPreferences("launcher_prefs", MODE_PRIVATE)) }
+    private val favoritesStore by lazy { FavoritesStore(launcherPreferences) }
+    private val languageStore by lazy { LanguageStore(launcherPreferences) }
     private val uiState = MutableStateFlow(LauncherUiState())
+
+    override fun attachBaseContext(newBase: Context) {
+        val preferences = newBase.getSharedPreferences("launcher_prefs", MODE_PRIVATE)
+        val language = LanguageStore(preferences).loadLanguage()
+        super.attachBaseContext(newBase.withAppLanguage(language))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -110,6 +119,9 @@ class MainActivity : ComponentActivity() {
         window.statusBarColor = Color.Black.toArgb()
         window.navigationBarColor = Color.Black.toArgb()
         enterImmersiveMode()
+
+        val language = languageStore.loadLanguage()
+        uiState.value = uiState.value.copy(selectedLanguage = language)
 
         loadApps()
 
@@ -127,6 +139,7 @@ class MainActivity : ComponentActivity() {
                     onCameraClick = ::openCamera,
                     onLaunchDismiss = ::dismissLaunchPrompt,
                     onLaunchConfirm = ::confirmLaunch,
+                    onLanguageChange = ::onLanguageChange,
                 )
             }
         }
@@ -158,15 +171,27 @@ class MainActivity : ComponentActivity() {
         uiState.value = uiState.value.copy(homeQuery = query)
     }
 
+    private fun onLanguageChange(language: AppLanguage) {
+        val currentLanguage = uiState.value.selectedLanguage
+        if (currentLanguage == language) return
+
+        languageStore.saveLanguage(language)
+        uiState.value = uiState.value.copy(selectedLanguage = language)
+        recreate()
+    }
+
     private fun loadApps() {
         lifecycleScope.launch(Dispatchers.IO) {
             val apps = appsRepository.loadLaunchableApps()
-            val query = uiState.value.query
+            val current = uiState.value
+            val query = current.query
             uiState.value = LauncherUiState(
                 query = query,
+                homeQuery = current.homeQuery,
                 allApps = apps,
                 filteredApps = filterApps(apps, query),
                 favoritePackages = favoritesStore.loadFavorites(),
+                selectedLanguage = current.selectedLanguage,
             )
         }
     }
@@ -264,6 +289,7 @@ data class LauncherUiState(
     val filteredApps: List<LaunchableApp> = emptyList(),
     val favoritePackages: Set<String> = emptySet(),
     val pendingLaunchApp: LaunchableApp? = null,
+    val selectedLanguage: AppLanguage = AppLanguage.SPANISH,
 )
 
 data class LaunchableApp(
@@ -346,6 +372,7 @@ private fun LauncherApp(
     onCameraClick: () -> Unit,
     onLaunchDismiss: () -> Unit = {},
     onLaunchConfirm: (LaunchableApp, Int?) -> Unit = { _, _ -> },
+    onLanguageChange: (AppLanguage) -> Unit = {},
 ) {
     val pagerState = rememberPagerState(initialPage = 0) { 2 }
     val favoriteApps = remember(state.allApps, state.favoritePackages) {
@@ -379,6 +406,7 @@ private fun LauncherApp(
                     onQueryChange = onQueryChange,
                     onAppClick = onAppClick,
                     onToggleFavorite = onToggleFavorite,
+                    onLanguageChange = onLanguageChange,
                 )
             }
         }
@@ -460,6 +488,7 @@ private fun AppsScreen(
     onQueryChange: (String) -> Unit,
     onAppClick: (LaunchableApp) -> Unit,
     onToggleFavorite: (LaunchableApp) -> Unit,
+    onLanguageChange: (AppLanguage) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -469,7 +498,10 @@ private fun AppsScreen(
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         item {
-            AppsHeader()
+            AppsHeader(
+                selectedLanguage = state.selectedLanguage,
+                onLanguageChange = onLanguageChange,
+            )
         }
         item {
             SearchBox(
@@ -507,6 +539,10 @@ private fun AppsScreen(
 private fun ClockHeader(onClick: () -> Unit) {
     var now by remember { mutableStateOf(Date()) }
     val batteryLevel by rememberBatteryLevel()
+    val context = LocalContext.current
+    val locale = remember(context.resources.configuration.locales) {
+        context.resources.configuration.locales[0] ?: Locale.getDefault()
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -516,10 +552,10 @@ private fun ClockHeader(onClick: () -> Unit) {
     }
 
     val timeText = remember(now) {
-        SimpleDateFormat("HH:mm", Locale("es", "ES")).format(now)
+        SimpleDateFormat("HH:mm", locale).format(now)
     }
     val dateText = remember(now) {
-        SimpleDateFormat("EEEE\nd MMMM", Locale("es", "ES")).format(now)
+        SimpleDateFormat("EEEE\nd MMMM", locale).format(now)
     }
 
     Column(
@@ -571,7 +607,7 @@ private fun ClockHeader(onClick: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = dateText.replaceFirstChar { it.titlecase(Locale("es", "ES")) },
+                    text = dateText.replaceFirstChar { it.titlecase(locale) },
                     color = Color(0xFFD0D0D0),
                     fontSize = 16.sp,
                     textAlign = TextAlign.Center,
@@ -624,18 +660,33 @@ private fun EmptyFavoritesCard(
 }
 
 @Composable
-private fun AppsHeader() {
+private fun AppsHeader(
+    selectedLanguage: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 24.dp),
     ) {
-        Text(
-            text = "Aplicaciones",
-            color = Color.White,
-            fontSize = 34.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.apps_title),
+                color = Color.White,
+                fontSize = 34.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            TextButton(onClick = { onLanguageChange(selectedLanguage.next()) }) {
+                Text(
+                    text = stringResource(R.string.language_picker, selectedLanguage.shortLabel),
+                    color = Color(0xFFDADADA),
+                )
+            }
+        }
     }
 }
 
@@ -648,14 +699,14 @@ private fun AppsTipCard(appCount: Int) {
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
             Text(
-                text = "Apps",
+                text = stringResource(R.string.apps_card_title),
                 color = Color.White,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "$appCount aplicaciones",
+                text = stringResource(R.string.apps_count, appCount),
                 color = Color(0xFFCFCFCF),
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -704,7 +755,7 @@ private fun SearchBox(
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
         placeholder = {
-            Text("Buscar aplicacion", color = Color(0xFF8D8D8D))
+            Text(stringResource(R.string.search_placeholder), color = Color(0xFF8D8D8D))
         },
         leadingIcon = {
             Icon(
@@ -736,9 +787,9 @@ private fun EmptyState(query: String) {
     ) {
         Text(
             text = if (query.isBlank()) {
-                "No se encontraron aplicaciones."
+                stringResource(R.string.no_apps_found)
             } else {
-                "No hay resultados para \"$query\"."
+                stringResource(R.string.no_results_for, query)
             },
             color = Color(0xFFDADADA),
             modifier = Modifier.padding(18.dp),
@@ -874,26 +925,26 @@ private fun LaunchIntentDialog(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = "Cuanto tiempo piensas usarla?",
+                    text = stringResource(R.string.launch_dialog_question),
                     color = Color(0xFFD0D0D0),
                     fontSize = 16.sp,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    QuickTimeButton("5 min") { onLaunchNow(5) }
-                    QuickTimeButton("10 min") { onLaunchNow(10) }
-                    QuickTimeButton("15 min") { onLaunchNow(15) }
+                    QuickTimeButton(stringResource(R.string.duration_5m)) { onLaunchNow(5) }
+                    QuickTimeButton(stringResource(R.string.duration_10m)) { onLaunchNow(10) }
+                    QuickTimeButton(stringResource(R.string.duration_15m)) { onLaunchNow(15) }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    QuickTimeButton("30 min") { onLaunchNow(30) }
-                    QuickTimeButton("60 min") { onLaunchNow(60) }
-                    QuickTimeButton("Sin limite") { onLaunchNow(null) }
+                    QuickTimeButton(stringResource(R.string.duration_30m)) { onLaunchNow(30) }
+                    QuickTimeButton(stringResource(R.string.duration_60m)) { onLaunchNow(60) }
+                    QuickTimeButton(stringResource(R.string.duration_unlimited)) { onLaunchNow(null) }
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancelar", color = Color(0xFFB5B5B5))
+                        Text(stringResource(R.string.cancel), color = Color(0xFFB5B5B5))
                     }
                 }
             }
