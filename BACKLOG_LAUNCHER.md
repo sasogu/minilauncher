@@ -1,195 +1,147 @@
 # Backlog tecnico del launcher minimalista
 
-Este documento recoge el backlog base para construir un launcher Android completo en Kotlin + Jetpack Compose, tomando como referencia visual las capturas de la carpeta `images`.
+Este documento refleja el estado real del proyecto y las siguientes prioridades de desarrollo para `Minilauncher`.
 
-## Objetivo del MVP
+## Estado actual
 
-Entregar un launcher funcional que:
+La base funcional ya esta construida.
 
-- pueda establecerse como launcher por defecto
-- muestre una home minimalista con reloj y fecha
-- permita buscar y abrir apps instaladas rapidamente
-- incluya ajustes basicos persistentes
-- tenga un onboarding simple inspirado en las capturas
+Actualmente la app incluye:
 
-## Stack recomendado
+- launcher minimalista con reloj, fecha y aro de bateria
+- lista completa de aplicaciones con busqueda en tiempo real
+- apertura de apps y dialogo de pausa consciente
+- recordatorios locales de uso
+- favoritas persistentes en Home
+- pulsacion larga en favoritas para moverlas al inicio
+- accesos fijos a telefono y camara
+- selector de idioma configurable por usuario
+- soporte para espanol, valenciano e ingles
+- persistencia con `DataStore`
+- cache de iconos y carga incremental de apps
+- tests unitarios basicos para utilidades y persistencia
+- metadata base y flujo inicial preparados para F-Droid
+
+## Stack actual
 
 - Kotlin
 - Jetpack Compose
-- MVVM
 - StateFlow
-- Hilt
-- Navigation Compose
-- DataStore
-- Room opcional para futuras estadisticas
-- `LauncherApps` y `PackageManager` para integracion Android
+- DataStore Preferences
+- JUnit
+- `PackageManager` para apps instaladas
 
-## Backlog MVP
+## Completado
 
-### 1. Bootstrap del proyecto
+### Base de producto
 
-- Crear proyecto Android con Kotlin, Compose, Hilt y Navigation Compose.
-- Configurar `minSdk`, `targetSdk`, variantes debug/release y reglas basicas de lint.
-- Crear la estructura base por features.
+- Registro como launcher por defecto.
+- Home minimalista funcional.
+- Pantalla de aplicaciones con busqueda.
+- Apertura rapida de apps.
+- Favoritas persistentes.
+- Recordatorio local tras tiempo seleccionado.
 
-### 2. Tema visual minimalista
+### Ajustes y persistencia
 
-- Definir paleta: negro, gris oscuro, blanco roto.
-- Crear sistema de tipografias, espaciados, radios y bordes.
-- Implementar componentes base reutilizables:
-  - `MinimalButton`
-  - `MinimalCard`
-  - `SettingsRow`
-  - `SearchField`
-  - `AppListItem`
+- Persistencia de idioma.
+- Persistencia de favoritas y orden de favoritas.
+- Migracion desde `SharedPreferences` a `DataStore`.
 
-### 3. Arquitectura base
+### Rendimiento y arquitectura
 
-- Crear `MainActivity`.
-- Configurar navegacion Compose.
-- Montar `ViewModel` base por feature.
-- Preparar `UiState`, `UiEvent` y `UiAction`.
+- Carga incremental de apps.
+- Cache de iconos en memoria.
+- Refactor parcial de logica fuera de la UI a `LauncherState.kt`.
+- Tests unitarios para `normalize`, `filterApps`, `FavoritesStore` y `LanguageStore`.
 
-### 4. Registro como launcher
+### Release y F-Droid
 
-- Configurar en `AndroidManifest.xml` la actividad principal con:
-  - `ACTION_MAIN`
-  - `CATEGORY_HOME`
-  - `CATEGORY_DEFAULT`
-- Verificar que Android permita elegir la app como launcher predeterminado.
-- Probar el comportamiento al pulsar Home.
+- Metadata base de `fastlane`.
+- Capturas iniciales.
+- Changelog por version en `fastlane/metadata`.
+- Scripts internos de release y sincronizacion de changelog.
+- Nota corta de privacidad en `README.md`.
 
-### 5. Acceso a aplicaciones instaladas
+## Prioridad inmediata v0.2.x
 
-- Crear `AppsRepository`.
-- Obtener apps lanzables con `LauncherApps` o `PackageManager`.
-- Mapear a un modelo `LaunchableApp` con:
-  - nombre
-  - package name
-  - actividad de lanzamiento
-  - icono
-- Ordenar alfabeticamente y filtrar duplicados.
+### 1. Pantalla de ajustes real
 
-### 6. Apertura de aplicaciones
+- Crear una pantalla de ajustes visible desde la app.
+- Mover ahi el selector de idioma.
+- Anadir formato horario 12/24h.
+- Preparar ajustes futuros sin seguir cargando la pantalla de apps.
 
-- Implementar la apertura de apps desde package/activity.
-- Manejar errores si una app ya no esta disponible.
-- Verificar que el flujo sea rapido y estable.
+### 2. Apps ocultas
 
-### 7. Pantalla Home
+- Permitir ocultar apps desde la lista principal.
+- Crear una vista para restaurarlas.
+- Persistirlas en `DataStore`.
 
-- Crear una home minimalista con:
-  - reloj grande
-  - fecha
-  - accesos rapidos opcionales
-  - gesto o toque para abrir el listado
-- Actualizar la hora en vivo con bajo coste.
-- Ajustar layout para distintas alturas de pantalla.
+### 3. Pulido de favoritas
 
-### 8. Pantalla de lista de apps
+- Revisar la UX de marcado de favoritas para que sea mas evidente.
+- Evaluar feedback visual o pequeno hint para descubrir la pulsacion larga en Home.
+- Ajustar limites visuales de Home cuando haya muchas favoritas.
 
-- Añadir buscador en la parte superior.
-- Mostrar lista vertical simple.
-- Añadir indice alfabetico lateral.
-- Soportar scroll rapido.
-- Abrir app al hacer tap.
+### 4. Accesibilidad y pulido visual
 
-### 9. Busqueda en tiempo real
+- Revisar tamanos tactiles minimos.
+- Revisar contraste de iconos y textos secundarios.
+- Validar el comportamiento de la barra inferior en distintos dispositivos.
 
-- Filtrar por nombre mientras se escribe.
-- Normalizar acentos y mayusculas.
-- Mantener buen rendimiento con muchas apps.
-- Decidir si el teclado se abre automaticamente al entrar.
+## Siguientes mejoras tecnicas
 
-### 10. Persistencia de ajustes
+### 1. Arquitectura
 
-- Configurar DataStore.
-- Guardar:
-  - formato horario
-  - mostrar/ocultar reloj
-  - onboarding visto
-  - favoritas
-  - apps ocultas
+- Seguir extrayendo logica de `MainActivity`.
+- Introducir una capa mas clara de acciones/eventos de UI.
+- Evaluar si compensa introducir `ViewModel` para separar ciclo de vida y estado.
 
-### 11. Pantalla de ajustes
+### 2. Testing
 
-- Implementar opciones del MVP:
-  - reloj visible
-  - formato 12/24 horas
-  - reiniciar onboarding
-  - gestionar favoritas
-  - ocultar apps
-- Mantener consistencia visual con el resto del launcher.
+- Anadir tests para `LauncherStateStore`.
+- Anadir tests para migracion de datos desde preferencias antiguas.
+- Anadir tests instrumentados minimos para flujos criticos.
 
-### 12. Onboarding
+### 3. Rendimiento
 
-- Crear flujo de tarjetas informativas similar al de las capturas.
-- Guardar progreso y estado completado.
-- Permitir omitir y reabrir desde ajustes.
-
-### 13. Favoritas y accesos rapidos
-
-- Seleccionar 2-4 apps favoritas.
-- Mostrarlas en Home.
-- Dejar preparado el terreno para reordenacion futura.
-
-### 14. Apps ocultas
-
-- Ocultar apps de la lista principal.
-- Crear vista sencilla para restaurarlas.
-- Evitar perdidas de configuracion.
-
-### 15. Rendimiento y pulido
-
-- Cachear iconos.
-- Minimizar recomposiciones en Compose.
-- Revisar fluidez con listas grandes.
-- Ajustar contraste, accesibilidad y tamanos tactiles.
+- Medir tiempos de primera carga vs recarga.
+- Revisar si compensa precachear una cantidad limitada de iconos visibles.
+- Reducir recomposiciones innecesarias en la lista.
 
 ## Backlog Fase 2
 
-- Bloqueo temporal de apps.
+- Onboarding breve y reiniciable.
+- Apps bloqueadas temporalmente.
 - Mensajes de foco o digital detox.
-- Estadisticas basicas de uso.
+- Estadisticas basicas de uso local.
 - Modulos configurables en Home.
 - Backup o exportacion de configuracion.
 - Gestos y accesos directos avanzados.
+- Capturas por idioma para la ficha de F-Droid.
 
 ## Historias clave
 
 - Como usuario, quiero que al pulsar Home aparezca este launcher.
 - Como usuario, quiero buscar una app escribiendo su nombre y abrirla al instante.
-- Como usuario, quiero ver solo lo esencial en pantalla.
-- Como usuario, quiero ocultar apps que me distraen.
-- Como usuario, quiero configurar pocas cosas, pero las importantes.
+- Como usuario, quiero fijar mis apps mas usadas en Home y reordenarlas rapidamente.
+- Como usuario, quiero reducir friccion y distracciones al usar el telefono.
+- Como usuario, quiero configurar solo lo importante.
 
-## Definicion de MVP terminado
+## Criterios para v0.2.0
 
-El MVP se considera terminado cuando:
+La version `0.2.0` deberia quedar cerrada cuando se cumpla al menos esto:
 
-- la app puede elegirse como launcher por defecto
-- la home es funcional y estable
-- la lista de apps carga correctamente
-- la busqueda funciona en tiempo real
-- las apps se abren sin errores relevantes
-- los ajustes basicos quedan persistidos
-- el onboarding puede completarse y reiniciarse
-
-## Orden recomendado de implementacion
-
-1. Bootstrap del proyecto
-2. Tema y componentes base
-3. Registro como launcher
-4. Repositorio de apps instaladas
-5. Lista de apps y apertura
-6. Pantalla Home
-7. Ajustes con DataStore
-8. Onboarding
-9. Favoritas y apps ocultas
-10. Pulido
+- pantalla de ajustes funcional
+- selector de idioma movido a ajustes
+- soporte de formato 12/24 horas
+- apps ocultas persistentes
+- tests ampliados sobre la nueva logica de estado
+- changelog y flujo de release repetibles sin pasos manuales innecesarios
 
 ## Notas tecnicas
 
-- Flutter puede servir para prototipos visuales, pero para un launcher completo se recomienda Kotlin + Compose por su integracion directa con Android.
-- Algunas funciones avanzadas de bloqueo o control de uso pueden variar segun fabricante y version de Android.
-- Conviene empezar con soporte para Android 12+ para reducir complejidad inicial.
+- El proyecto sigue priorizando simplicidad antes que arquitectura compleja.
+- Antes de introducir nuevas dependencias grandes, conviene agotar mejoras con la base actual.
+- Las funciones avanzadas de control de uso pueden variar segun fabricante y version de Android.
