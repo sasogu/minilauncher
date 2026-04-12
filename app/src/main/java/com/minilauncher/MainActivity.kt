@@ -4,10 +4,12 @@ import android.Manifest
 import android.content.BroadcastReceiver
 import android.app.AlarmManager
 import android.app.PendingIntent
+import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
@@ -42,6 +44,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
@@ -61,6 +64,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -81,9 +85,15 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -106,12 +116,34 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Devuelve el emoji de la fase lunar para una fecha dada.
+ * Algoritmo local sin red: usa luna nueva de referencia (6 ene 2000) y período sinódico.
+ */
+private fun lunarPhaseEmoji(date: Date = Date()): String {
+    val knownNewMoonMs = 947_182_440_000L // 6 ene 2000 18:14 UTC en milisegundos
+    val synodicMs = 29.53059 * 24 * 60 * 60 * 1000
+    val elapsed = (date.time - knownNewMoonMs).toDouble()
+    val phase = ((elapsed % synodicMs) / synodicMs + 1.0) % 1.0
+    return when ((phase * 8).toInt()) {
+        0 -> "\uD83C\uDF11" // 🌑 Luna nueva
+        1 -> "\uD83C\uDF12" // 🌒 Creciente menguante
+        2 -> "\uD83C\uDF13" // 🌓 Cuarto creciente
+        3 -> "\uD83C\uDF14" // 🌔 Gibosa creciente
+        4 -> "\uD83C\uDF15" // 🌕 Luna llena
+        5 -> "\uD83C\uDF16" // 🌖 Gibosa menguante
+        6 -> "\uD83C\uDF17" // 🌗 Cuarto menguante
+        else -> "\uD83C\uDF18" // 🌘 Creciente menguante
+    }
+}
+
 class MainActivity : ComponentActivity() {
     private val appsRepository by lazy { AppsRepository(packageManager) }
     private val favoritesStore by lazy { FavoritesStore(applicationContext.launcherDataStore) }
     private val launcherStateStore by lazy { LauncherStateStore(appsRepository, favoritesStore) }
     private val languageStore by lazy { LanguageStore(applicationContext.launcherDataStore) }
     private val themeStore by lazy { ThemeStore(applicationContext.launcherDataStore) }
+    private val usagePromptStore by lazy { UsagePromptStore(applicationContext.launcherDataStore) }
     private val uiState = MutableStateFlow(LauncherUiState())
     private var loadAppsJob: Job? = null
     private var skipReminderResetOnNextResume = false
@@ -130,9 +162,11 @@ class MainActivity : ComponentActivity() {
 
         val language = languageStore.loadLanguageBlocking()
         val themeMode = themeStore.loadThemeModeBlocking()
+        val usagePromptEnabled = usagePromptStore.loadBlocking()
         uiState.value = uiState.value.copy(
             selectedLanguage = language,
             selectedThemeMode = themeMode,
+            usagePromptEnabled = usagePromptEnabled,
         )
         updateSystemBars(themeMode)
         enterImmersiveMode()
@@ -160,6 +194,10 @@ class MainActivity : ComponentActivity() {
                     onLanguageChange = ::onLanguageChange,
                     onThemeChange = ::onThemeChange,
                     onClearReminder = ::clearActiveReminderFromSettings,
+                    onUsagePromptToggle = ::onUsagePromptToggle,
+                    onSwipeRight = ::onSwipeRight,
+                    onWebSearch = ::openWebSearch,
+                    onWebSearchDismiss = ::dismissWebSearch,
                 )
             }
         }
@@ -207,6 +245,35 @@ class MainActivity : ComponentActivity() {
             languageStore.saveLanguage(language)
             uiState.value = uiState.value.copy(selectedLanguage = language)
             recreate()
+        }
+    }
+
+    private fun onSwipeRight() {
+        uiState.value = uiState.value.copy(showWebSearch = true)
+    }
+
+    private fun openWebSearch(query: String) {
+        val searchIntent = Intent(Intent.ACTION_WEB_SEARCH).apply {
+            putExtra(SearchManager.QUERY, query)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        if (searchIntent.resolveActivity(packageManager) != null) {
+            startActivity(searchIntent)
+        } else {
+            val uri = Uri.parse("https://duckduckgo.com/?q=${Uri.encode(query)}")
+            startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+        dismissWebSearch()
+    }
+
+    private fun dismissWebSearch() {
+        uiState.value = uiState.value.copy(showWebSearch = false)
+    }
+
+    private fun onUsagePromptToggle(enabled: Boolean) {
+        lifecycleScope.launch {
+            usagePromptStore.save(enabled)
+            uiState.value = uiState.value.copy(usagePromptEnabled = enabled)
         }
     }
 
@@ -270,6 +337,10 @@ class MainActivity : ComponentActivity() {
                     packageName = blocked.packageName,
                 ),
             )
+            return
+        }
+        if (!uiState.value.usagePromptEnabled) {
+            openApp(app)
             return
         }
         uiState.value = uiState.value.copy(pendingLaunchApp = app)
@@ -411,6 +482,10 @@ private fun LauncherApp(
     onLanguageChange: (AppLanguage) -> Unit = {},
     onThemeChange: (ThemeMode) -> Unit = {},
     onClearReminder: () -> Unit = {},
+    onUsagePromptToggle: (Boolean) -> Unit = {},
+    onSwipeRight: () -> Unit = {},
+    onWebSearch: (String) -> Unit = {},
+    onWebSearchDismiss: () -> Unit = {},
 ) {
     val palette = launcherPalette()
     val pagerState = rememberPagerState(initialPage = 0) { 3 }
@@ -442,6 +517,7 @@ private fun LauncherApp(
                     onAddFavoritesClick = { scope.launch { pagerState.animateScrollToPage(1) } },
                     onPhoneClick = onPhoneClick,
                     onCameraClick = onCameraClick,
+                    onSwipeRight = onSwipeRight,
                 )
 
                 1 -> AppsScreen(
@@ -455,9 +531,11 @@ private fun LauncherApp(
                 else -> SettingsScreen(
                     selectedLanguage = state.selectedLanguage,
                     selectedThemeMode = state.selectedThemeMode,
+                    usagePromptEnabled = state.usagePromptEnabled,
                     onLanguageChange = onLanguageChange,
                     onThemeChange = onThemeChange,
                     onClearReminder = onClearReminder,
+                    onUsagePromptToggle = onUsagePromptToggle,
                     onBackToApps = { scope.launch { pagerState.animateScrollToPage(1) } },
                 )
             }
@@ -480,6 +558,12 @@ private fun LauncherApp(
                 onDismiss = onTimeoutDismiss,
             )
         }
+        if (state.showWebSearch) {
+            WebSearchDialog(
+                onSearch = onWebSearch,
+                onDismiss = onWebSearchDismiss,
+            )
+        }
     }
 }
 
@@ -494,15 +578,26 @@ private fun HomeScreen(
     onAddFavoritesClick: () -> Unit,
     onPhoneClick: () -> Unit,
     onCameraClick: () -> Unit,
+    onSwipeRight: () -> Unit = {},
 ) {
     val palette = launcherPalette()
+    val swipeRightConnection = remember {
+        object : NestedScrollConnection {
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                if (available.x > 300f) onSwipeRight()
+                return super.onPostFling(consumed, available)
+            }
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(palette.background),
     ) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(swipeRightConnection),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 28.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
@@ -680,6 +775,11 @@ private fun ClockHeader(onClick: () -> Unit) {
                     textAlign = TextAlign.Center,
                     lineHeight = 18.sp,
                 )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = lunarPhaseEmoji(now),
+                    fontSize = 20.sp,
+                )
             }
         }
     }
@@ -797,9 +897,11 @@ private fun AppsHeader(
 private fun SettingsScreen(
     selectedLanguage: AppLanguage,
     selectedThemeMode: ThemeMode,
+    usagePromptEnabled: Boolean,
     onLanguageChange: (AppLanguage) -> Unit,
     onThemeChange: (ThemeMode) -> Unit,
     onClearReminder: () -> Unit,
+    onUsagePromptToggle: (Boolean) -> Unit,
     onBackToApps: () -> Unit,
 ) {
     val palette = launcherPalette()
@@ -904,6 +1006,22 @@ private fun SettingsScreen(
                     color = palette.textSecondary,
                     style = MaterialTheme.typography.bodyMedium,
                 )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_usage_prompt_label),
+                        color = palette.textPrimary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = usagePromptEnabled,
+                        onCheckedChange = onUsagePromptToggle,
+                    )
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedButton(
                     onClick = onClearReminder,
@@ -1316,6 +1434,95 @@ private fun TimeoutReachedDialog(
                     }
                     OutlinedButton(onClick = onDismiss) {
                         Text(stringResource(R.string.timeout_acknowledge), color = palette.textPrimary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WebSearchDialog(
+    onSearch: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val palette = launcherPalette()
+    var query by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
+    BackHandler(onBack = onDismiss)
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xB3000000))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = false) {},
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF141414)),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 0.dp, bottomEnd = 0.dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(20.dp)
+                    .navigationBarsPadding(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
+                    singleLine = true,
+                    placeholder = {
+                        Text(stringResource(R.string.web_search_hint), color = palette.textMuted)
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Search,
+                            contentDescription = null,
+                            tint = palette.textPrimary,
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                        imeAction = ImeAction.Search,
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onSearch = { if (query.isNotBlank()) onSearch(query) },
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = palette.inputBackground,
+                        unfocusedContainerColor = palette.inputBackground,
+                        focusedBorderColor = palette.inputBorderFocused,
+                        unfocusedBorderColor = palette.inputBorderUnfocused,
+                        focusedTextColor = palette.textPrimary,
+                        unfocusedTextColor = palette.textPrimary,
+                        cursorColor = palette.textPrimary,
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.cancel), color = palette.textMuted)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    OutlinedButton(
+                        onClick = { if (query.isNotBlank()) onSearch(query) },
+                        enabled = query.isNotBlank(),
+                    ) {
+                        Text(stringResource(R.string.web_search_button), color = palette.textPrimary)
                     }
                 }
             }

@@ -32,6 +32,9 @@
     <string name="settings_usage_title">Usage and reminders</string>
     <string name="settings_usage_subtitle">When time is up, Minilauncher sends a reminder and blocks reopening that app from the launcher until you acknowledge it or add more time.</string>
     <string name="settings_clear_reminder">Reset active reminder</string>
+    <string name="settings_usage_prompt_label">Time prompt when opening apps</string>
+    <string name="web_search_hint">Search the web...</string>
+    <string name="web_search_button">Search</string>
 
     <string name="reminder_default_app">this app</string>
     <string name="reminder_title">Time is up</string>

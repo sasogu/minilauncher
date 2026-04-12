@@ -18,6 +18,9 @@ Actualmente la app incluye:
 - selector de idioma configurable por usuario
 - soporte para espanol, valenciano e ingles
 - persistencia con `DataStore`
+- toggle en ajustes para activar/desactivar dialogo de tiempo por app
+- indicador de fase lunar en la home
+- busqueda web rapida desde Home con gesto horizontal izquierda -> derecha
 - cache de iconos y carga incremental de apps
 - tests unitarios basicos para utilidades y persistencia
 - metadata base y flujo inicial preparados para F-Droid
@@ -41,12 +44,14 @@ Actualmente la app incluye:
 - Apertura rapida de apps.
 - Favoritas persistentes.
 - Recordatorio local tras tiempo seleccionado.
+- Busqueda web rapida por gesto desde Home.
 
 ### Ajustes y persistencia
 
 - Persistencia de idioma.
 - Persistencia de favoritas y orden de favoritas.
 - Migracion desde `SharedPreferences` a `DataStore`.
+- Persistencia de preferencia para activar/desactivar el dialogo de tiempo.
 
 ### Rendimiento y arquitectura
 
@@ -89,6 +94,11 @@ Actualmente la app incluye:
 - Revisar tamanos tactiles minimos.
 - Revisar contraste de iconos y textos secundarios.
 - Validar el comportamiento de la barra inferior en distintos dispositivos.
+
+### 5. Pulido de gestos de Home
+
+- Ajustar umbral/sensibilidad del gesto horizontal para evitar falsos positivos.
+- Definir feedback visual minimo cuando el gesto abre la busqueda web.
 
 ## Siguientes mejoras tecnicas
 

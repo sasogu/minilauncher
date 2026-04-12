@@ -58,7 +58,10 @@ Main features:
 - Search on home and app list
 - Settings screen for language and theme
 - Intentional-use prompt before launching apps
+- Optional toggle to disable the intentional-use prompt
 - Optional local reminder after selected duration
+- Moon phase indicator on the home screen
+- Quick web search from Home with a left-to-right swipe gesture
 
 Notes:
 
@@ -105,8 +108,8 @@ Description: |
   friction, distractions and impulsive phone usage.
 
   Features include a minimal home, favorites, app search,
-  theme and language settings, and an intentional-use prompt before
-  opening apps.
+  theme and language settings, optional intentional-use prompt before
+  opening apps, moon phase indicator, and quick web search gesture.
 
 RepoType: git
 Repo: https://github.com/sasogu/minilauncher.git

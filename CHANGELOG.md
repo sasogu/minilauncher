@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Toggle en ajustes para activar/desactivar el dialogo de tiempo antes de abrir apps (desactivado por defecto).
+- Indicador de fase lunar en la home junto al reloj y la fecha.
+- Busqueda web rapida desde Home con gesto horizontal izquierda -> derecha y panel inferior.
+
 ## 0.2.0
 
 - Pantalla de ajustes funcional para las opciones principales.

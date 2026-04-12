@@ -2,6 +2,9 @@
 - Selector de idioma movido a ajustes.
 - Cambio de tema claro y oscuro.
 - Busqueda en home y en el listado completo de aplicaciones.
+- Toggle para activar o desactivar el dialogo de tiempo por app.
+- Indicador de fase lunar en la home.
+- Busqueda web rapida desde Home con gesto izquierda -> derecha.
 - Reordenacion rapida de favoritas con pulsacion larga.
 - Cache de iconos y carga incremental de aplicaciones.
 - Permiso de superposicion integrado para mejorar el retorno del launcher al vencer el tiempo.

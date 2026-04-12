@@ -16,7 +16,10 @@ Incluye:
 - accesos fijos a teléfono y cámara
 - filtro en home y en listado de apps
 - pausa consciente antes de abrir apps
+- toggle en ajustes para activar/desactivar la pausa consciente por app
 - recordatorio local opcional tras el tiempo elegido
+- fase lunar en la home junto a reloj y fecha
+- busqueda web rapida en Home con gesto horizontal izquierda -> derecha
 - idioma configurable por usuario (espanol, valenciano e ingles)
 - cache de iconos y carga incremental de aplicaciones
 - selector de tema claro/oscuro desde ajustes
@@ -28,7 +31,7 @@ Incluye:
 - Valenciano (`ca`)
 - Ingles (`en`)
 
-El idioma se puede cambiar desde la pantalla de aplicaciones.
+El idioma se puede cambiar desde ajustes.
 
 ## Stack
 

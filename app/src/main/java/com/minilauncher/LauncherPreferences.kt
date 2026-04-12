@@ -5,7 +5,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.runBlocking
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.SharedPreferencesMigration
 import kotlinx.coroutines.flow.Flow
@@ -28,6 +30,7 @@ object LauncherPreferenceKeys {
     val languageTag = stringPreferencesKey("language_tag")
     val favoritePackagesOrder = stringPreferencesKey("favorite_packages_order")
     val themeMode = stringPreferencesKey("theme_mode")
+    val usagePromptEnabled = booleanPreferencesKey("usage_prompt_enabled")
 }
 
 fun DataStore<Preferences>.safeData(): Flow<Preferences> {
@@ -49,5 +52,31 @@ suspend fun DataStore<Preferences>.readString(key: Preferences.Key<String>, defa
 suspend fun DataStore<Preferences>.writeString(key: Preferences.Key<String>, value: String) {
     edit { preferences ->
         preferences[key] = value
+    }
+}
+
+suspend fun DataStore<Preferences>.readBoolean(key: Preferences.Key<Boolean>, defaultValue: Boolean): Boolean {
+    return safeData().map { preferences ->
+        preferences[key] ?: defaultValue
+    }.first()
+}
+
+suspend fun DataStore<Preferences>.writeBoolean(key: Preferences.Key<Boolean>, value: Boolean) {
+    edit { preferences ->
+        preferences[key] = value
+    }
+}
+
+class UsagePromptStore(
+    private val dataStore: DataStore<Preferences>,
+) {
+    suspend fun load(): Boolean {
+        return dataStore.readBoolean(LauncherPreferenceKeys.usagePromptEnabled, false)
+    }
+
+    fun loadBlocking(): Boolean = runBlocking { load() }
+
+    suspend fun save(enabled: Boolean) {
+        dataStore.writeBoolean(LauncherPreferenceKeys.usagePromptEnabled, enabled)
     }
 }

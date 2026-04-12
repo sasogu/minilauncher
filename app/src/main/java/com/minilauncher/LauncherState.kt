@@ -25,6 +25,8 @@ data class LauncherUiState(
     val timeoutNotice: TimeoutNotice? = null,
     val selectedLanguage: AppLanguage = AppLanguage.SPANISH,
     val selectedThemeMode: ThemeMode = ThemeMode.DARK,
+    val usagePromptEnabled: Boolean = false,
+    val showWebSearch: Boolean = false,
 )
 
 data class TimeoutNotice(

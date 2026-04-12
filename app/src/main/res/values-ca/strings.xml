@@ -32,6 +32,9 @@
     <string name="settings_usage_title">Us i recordatoris</string>
     <string name="settings_usage_subtitle">Quan s\'acabe el temps, Minilauncher enviarà un avís i bloquejarà la reobertura d\'eixa app des del launcher fins que ho confirmes o afegisques més temps.</string>
     <string name="settings_clear_reminder">Reiniciar recordatori actiu</string>
+    <string name="settings_usage_prompt_label">Diàleg de temps en obrir apps</string>
+    <string name="web_search_hint">Cerca en internet...</string>
+    <string name="web_search_button">Cerca</string>
 
     <string name="reminder_default_app">esta app</string>
     <string name="reminder_title">Temps complit</string>

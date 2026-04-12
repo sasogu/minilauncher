@@ -32,6 +32,9 @@
     <string name="settings_usage_title">Uso y recordatorios</string>
     <string name="settings_usage_subtitle">Cuando termine el tiempo, Minilauncher enviará un aviso y bloqueará la reapertura de esa app desde el launcher hasta que lo confirmes o añadas más tiempo.</string>
     <string name="settings_clear_reminder">Resetear recordatorio activo</string>
+    <string name="settings_usage_prompt_label">Diálogo de tiempo al abrir apps</string>
+    <string name="web_search_hint">Buscar en internet...</string>
+    <string name="web_search_button">Buscar</string>
 
     <string name="reminder_default_app">esta app</string>
     <string name="reminder_title">Tiempo cumplido</string>
