@@ -10,6 +10,9 @@
     <string name="search_placeholder">Buscar aplicació</string>
     <string name="no_apps_found">No es troben aplicacions.</string>
     <string name="no_results_for">No hi ha resultats per a %1$s.</string>
+    <string name="app_actions_title">Accions de l\'aplicació</string>
+    <string name="app_actions_app_info">Obrir info de l\'app</string>
+    <string name="app_actions_uninstall">Desinstal·lar</string>
 
     <string name="launch_dialog_question">Quant de temps penses usar-la?</string>
     <string name="duration_5m">5 min</string>

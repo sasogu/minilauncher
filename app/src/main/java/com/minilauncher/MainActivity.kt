@@ -15,6 +15,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.provider.AlarmClock
+import android.provider.Settings
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import androidx.activity.compose.BackHandler
@@ -26,6 +27,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,6 +49,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Check
@@ -54,6 +57,7 @@ import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -87,9 +91,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -195,7 +196,8 @@ class MainActivity : ComponentActivity() {
                     onThemeChange = ::onThemeChange,
                     onClearReminder = ::clearActiveReminderFromSettings,
                     onUsagePromptToggle = ::onUsagePromptToggle,
-                    onSwipeRight = ::onSwipeRight,
+                    onOpenWebSearch = ::onOpenWebSearch,
+                    onOpenAppInfo = ::openAppInfo,
                     onWebSearch = ::openWebSearch,
                     onWebSearchDismiss = ::dismissWebSearch,
                 )
@@ -248,7 +250,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun onSwipeRight() {
+    private fun onOpenWebSearch() {
         uiState.value = uiState.value.copy(showWebSearch = true)
     }
 
@@ -264,6 +266,16 @@ class MainActivity : ComponentActivity() {
             startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
         dismissWebSearch()
+    }
+
+    private fun openAppInfo(app: LaunchableApp) {
+        val appInfoIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.parse("package:${app.packageName}")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        if (appInfoIntent.resolveActivity(packageManager) != null) {
+            startActivity(appInfoIntent)
+        }
     }
 
     private fun dismissWebSearch() {
@@ -483,7 +495,8 @@ private fun LauncherApp(
     onThemeChange: (ThemeMode) -> Unit = {},
     onClearReminder: () -> Unit = {},
     onUsagePromptToggle: (Boolean) -> Unit = {},
-    onSwipeRight: () -> Unit = {},
+    onOpenWebSearch: () -> Unit = {},
+    onOpenAppInfo: (LaunchableApp) -> Unit = {},
     onWebSearch: (String) -> Unit = {},
     onWebSearchDismiss: () -> Unit = {},
 ) {
@@ -517,7 +530,7 @@ private fun LauncherApp(
                     onAddFavoritesClick = { scope.launch { pagerState.animateScrollToPage(1) } },
                     onPhoneClick = onPhoneClick,
                     onCameraClick = onCameraClick,
-                    onSwipeRight = onSwipeRight,
+                    onOpenWebSearch = onOpenWebSearch,
                 )
 
                 1 -> AppsScreen(
@@ -525,6 +538,7 @@ private fun LauncherApp(
                     onQueryChange = onQueryChange,
                     onAppClick = onAppClick,
                     onToggleFavorite = onToggleFavorite,
+                    onOpenAppInfo = onOpenAppInfo,
                     onOpenSettings = { scope.launch { pagerState.animateScrollToPage(2) } },
                 )
 
@@ -578,26 +592,16 @@ private fun HomeScreen(
     onAddFavoritesClick: () -> Unit,
     onPhoneClick: () -> Unit,
     onCameraClick: () -> Unit,
-    onSwipeRight: () -> Unit = {},
+    onOpenWebSearch: () -> Unit = {},
 ) {
     val palette = launcherPalette()
-    val swipeRightConnection = remember {
-        object : NestedScrollConnection {
-            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-                if (available.x > 300f) onSwipeRight()
-                return super.onPostFling(consumed, available)
-            }
-        }
-    }
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(palette.background),
     ) {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(swipeRightConnection),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 28.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
@@ -633,6 +637,7 @@ private fun HomeScreen(
 
         BottomShortcuts(
             onPhoneClick = onPhoneClick,
+            onWebSearchClick = onOpenWebSearch,
             onCameraClick = onCameraClick,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -649,6 +654,7 @@ private fun AppsScreen(
     onQueryChange: (String) -> Unit,
     onAppClick: (LaunchableApp) -> Unit,
     onToggleFavorite: (LaunchableApp) -> Unit,
+    onOpenAppInfo: (LaunchableApp) -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     val palette = launcherPalette()
@@ -686,6 +692,7 @@ private fun AppsScreen(
                     app = app,
                     isFavorite = app.packageName in state.favoritePackages,
                     onClick = { onAppClick(app) },
+                    onOpenAppInfo = { onOpenAppInfo(app) },
                     onToggleFavorite = { onToggleFavorite(app) },
                 )
             }
@@ -1095,6 +1102,7 @@ private fun AppsTipCard(appCount: Int) {
 @Composable
 private fun BottomShortcuts(
     onPhoneClick: () -> Unit,
+    onWebSearchClick: () -> Unit,
     onCameraClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1109,6 +1117,14 @@ private fun BottomShortcuts(
         IconButton(onClick = onPhoneClick) {
             Icon(
                 imageVector = Icons.Rounded.Call,
+                contentDescription = null,
+                tint = palette.textPrimary,
+                modifier = Modifier.size(28.dp),
+            )
+        }
+        IconButton(onClick = onWebSearchClick) {
+            Icon(
+                imageVector = Icons.Outlined.Search,
                 contentDescription = null,
                 tint = palette.textPrimary,
                 modifier = Modifier.size(28.dp),
@@ -1201,6 +1217,7 @@ private fun AppRow(
     app: LaunchableApp,
     isFavorite: Boolean,
     onClick: () -> Unit,
+    onOpenAppInfo: () -> Unit,
     onToggleFavorite: () -> Unit,
 ) {
     val palette = launcherPalette()
@@ -1211,12 +1228,21 @@ private fun AppRow(
         onClick = onClick,
         onLongClick = null,
         trailing = {
-            IconButton(onClick = onToggleFavorite) {
-                Icon(
-                    imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                    contentDescription = null,
-                    tint = if (isFavorite) palette.textPrimary else palette.iconMuted,
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onToggleFavorite) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                        contentDescription = null,
+                        tint = if (isFavorite) palette.textPrimary else palette.iconMuted,
+                    )
+                }
+                IconButton(onClick = onOpenAppInfo) {
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = null,
+                        tint = palette.iconMuted,
+                    )
+                }
             }
         },
     )

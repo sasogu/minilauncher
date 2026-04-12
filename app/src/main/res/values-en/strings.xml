@@ -10,6 +10,9 @@
     <string name="search_placeholder">Search apps</string>
     <string name="no_apps_found">No applications found.</string>
     <string name="no_results_for">No results for \"%1$s\".</string>
+    <string name="app_actions_title">App actions</string>
+    <string name="app_actions_app_info">Open app info</string>
+    <string name="app_actions_uninstall">Uninstall</string>
 
     <string name="launch_dialog_question">How long do you plan to use it?</string>
     <string name="duration_5m">5 min</string>
