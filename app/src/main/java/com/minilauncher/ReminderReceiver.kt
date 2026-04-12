@@ -3,11 +3,13 @@ package com.minilauncher
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -16,30 +18,53 @@ class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val language = LanguageStore(context.launcherDataStore).loadLanguageBlocking()
         val localizedContext = context.withAppLanguage(language)
+        val canPostNotifications =
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
         ensureChannel(localizedContext)
-
-        if (
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
 
         val appLabel = intent.getStringExtra(EXTRA_APP_LABEL).orEmpty().ifBlank {
             localizedContext.getString(R.string.reminder_default_app)
         }
         val minutes = intent.getIntExtra(EXTRA_MINUTES, 0)
+        val notificationId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, (System.currentTimeMillis() % Int.MAX_VALUE).toInt())
+
+        val launcherIntent = Intent(localizedContext, MainActivity::class.java).apply {
+            putExtra(EXTRA_APP_LABEL, appLabel)
+            putExtra(EXTRA_MINUTES, minutes)
+            putExtra(EXTRA_TIMEOUT_REACHED, true)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+
+        try {
+            // Bring launcher to foreground as soon as the selected time ends.
+            localizedContext.startActivity(launcherIntent)
+        } catch (exception: Exception) {
+            Log.w("ReminderReceiver", "Could not foreground launcher on timeout", exception)
+        }
+
+        val contentPendingIntent = PendingIntent.getActivity(
+            localizedContext,
+            notificationId,
+            launcherIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
 
         val notification = NotificationCompat.Builder(localizedContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_reminder)
             .setContentTitle(localizedContext.getString(R.string.reminder_title))
             .setContentText(localizedContext.getString(R.string.reminder_content, minutes, appLabel))
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setContentIntent(contentPendingIntent)
             .setAutoCancel(true)
             .build()
 
-        NotificationManagerCompat.from(context).notify(System.currentTimeMillis().toInt(), notification)
+        if (canPostNotifications) {
+            NotificationManagerCompat.from(context).notify(notificationId, notification)
+        }
     }
 
     private fun ensureChannel(context: Context) {
@@ -58,6 +83,8 @@ class ReminderReceiver : BroadcastReceiver() {
     companion object {
         const val EXTRA_APP_LABEL = "extra_app_label"
         const val EXTRA_MINUTES = "extra_minutes"
+        const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
+        const val EXTRA_TIMEOUT_REACHED = "extra_timeout_reached"
         private const val CHANNEL_ID = "usage_reminders"
     }
 }

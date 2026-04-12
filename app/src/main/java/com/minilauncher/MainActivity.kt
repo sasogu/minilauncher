@@ -46,7 +46,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.Card
@@ -88,6 +90,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -108,8 +111,10 @@ class MainActivity : ComponentActivity() {
     private val favoritesStore by lazy { FavoritesStore(applicationContext.launcherDataStore) }
     private val launcherStateStore by lazy { LauncherStateStore(appsRepository, favoritesStore) }
     private val languageStore by lazy { LanguageStore(applicationContext.launcherDataStore) }
+    private val themeStore by lazy { ThemeStore(applicationContext.launcherDataStore) }
     private val uiState = MutableStateFlow(LauncherUiState())
     private var loadAppsJob: Job? = null
+    private var skipReminderResetOnNextResume = false
 
     override fun attachBaseContext(newBase: Context) {
         val language = LanguageStore(newBase.launcherDataStore).loadLanguageBlocking()
@@ -119,21 +124,25 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.Black.toArgb()
-        window.navigationBarColor = Color.Black.toArgb()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
-        enterImmersiveMode()
 
         val language = languageStore.loadLanguageBlocking()
-        uiState.value = uiState.value.copy(selectedLanguage = language)
+        val themeMode = themeStore.loadThemeModeBlocking()
+        uiState.value = uiState.value.copy(
+            selectedLanguage = language,
+            selectedThemeMode = themeMode,
+        )
+        updateSystemBars(themeMode)
+        enterImmersiveMode()
+        handleTimeoutIntent(intent)
 
         loadApps()
 
         setContent {
-            MinimalLauncherTheme {
-                val state by uiState.asStateFlow().collectAsStateWithLifecycle()
+            val state by uiState.asStateFlow().collectAsStateWithLifecycle()
+            MinimalLauncherTheme(themeMode = state.selectedThemeMode) {
                 LauncherApp(
                     state = state,
                     onQueryChange = ::onQueryChange,
@@ -146,14 +155,29 @@ class MainActivity : ComponentActivity() {
                     onCameraClick = ::openCamera,
                     onLaunchDismiss = ::dismissLaunchPrompt,
                     onLaunchConfirm = ::confirmLaunch,
+                    onTimeoutDismiss = ::dismissTimeoutNotice,
                     onLanguageChange = ::onLanguageChange,
+                    onThemeChange = ::onThemeChange,
+                    onClearReminder = ::clearActiveReminderFromSettings,
                 )
             }
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleTimeoutIntent(intent)
+    }
+
     override fun onResume() {
         super.onResume()
+        if (skipReminderResetOnNextResume) {
+            skipReminderResetOnNextResume = false
+        } else {
+            ReminderScheduler.resetActiveReminder(this)
+            uiState.value = uiState.value.copy(timeoutNotice = null)
+        }
         enterImmersiveMode()
         loadApps()
     }
@@ -183,6 +207,26 @@ class MainActivity : ComponentActivity() {
             uiState.value = uiState.value.copy(selectedLanguage = language)
             recreate()
         }
+    }
+
+    private fun onThemeChange(themeMode: ThemeMode) {
+        val currentTheme = uiState.value.selectedThemeMode
+        if (currentTheme == themeMode) return
+
+        lifecycleScope.launch {
+            themeStore.saveThemeMode(themeMode)
+            uiState.value = uiState.value.copy(selectedThemeMode = themeMode)
+            updateSystemBars(themeMode)
+        }
+    }
+
+    private fun updateSystemBars(themeMode: ThemeMode) {
+        val barColor = when (themeMode) {
+            ThemeMode.DARK -> Color.Black
+            ThemeMode.LIGHT -> Color(0xFFF3F4F6)
+        }
+        window.statusBarColor = barColor.toArgb()
+        window.navigationBarColor = barColor.toArgb()
     }
 
     private fun loadApps() {
@@ -219,6 +263,34 @@ class MainActivity : ComponentActivity() {
         uiState.value = uiState.value.copy(pendingLaunchApp = null)
     }
 
+    private fun dismissTimeoutNotice() {
+        ReminderScheduler.resetActiveReminder(this)
+        uiState.value = uiState.value.copy(timeoutNotice = null)
+    }
+
+    private fun clearActiveReminderFromSettings() {
+        ReminderScheduler.resetActiveReminder(this)
+        uiState.value = uiState.value.copy(timeoutNotice = null)
+    }
+
+    private fun handleTimeoutIntent(intent: Intent?) {
+        if (intent?.getBooleanExtra(ReminderReceiver.EXTRA_TIMEOUT_REACHED, false) != true) return
+        skipReminderResetOnNextResume = true
+
+        val appLabel = intent.getStringExtra(ReminderReceiver.EXTRA_APP_LABEL).orEmpty().ifBlank {
+            getString(R.string.reminder_default_app)
+        }
+        val minutes = intent.getIntExtra(ReminderReceiver.EXTRA_MINUTES, 0)
+        uiState.value = uiState.value.copy(
+            timeoutNotice = TimeoutNotice(
+                appLabel = appLabel,
+                minutes = minutes,
+            ),
+        )
+
+        intent.removeExtra(ReminderReceiver.EXTRA_TIMEOUT_REACHED)
+    }
+
     private fun confirmLaunch(app: LaunchableApp, durationMinutes: Int?) {
         if (durationMinutes != null) {
             ensureNotificationPermission()
@@ -227,6 +299,8 @@ class MainActivity : ComponentActivity() {
                 appLabel = app.label,
                 delayMinutes = durationMinutes,
             )
+        } else {
+            ReminderScheduler.resetActiveReminder(this)
         }
         dismissLaunchPrompt()
         openApp(app)
@@ -299,9 +373,13 @@ private fun LauncherApp(
     onCameraClick: () -> Unit,
     onLaunchDismiss: () -> Unit = {},
     onLaunchConfirm: (LaunchableApp, Int?) -> Unit = { _, _ -> },
+    onTimeoutDismiss: () -> Unit = {},
     onLanguageChange: (AppLanguage) -> Unit = {},
+    onThemeChange: (ThemeMode) -> Unit = {},
+    onClearReminder: () -> Unit = {},
 ) {
-    val pagerState = rememberPagerState(initialPage = 0) { 2 }
+    val palette = launcherPalette()
+    val pagerState = rememberPagerState(initialPage = 0) { 3 }
     val scope = rememberCoroutineScope()
     val favoriteApps = remember(state.allApps, state.favoritePackages) {
         val appsByPackage = state.allApps.associateBy { it.packageName }
@@ -313,7 +391,7 @@ private fun LauncherApp(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color.Black,
+        color = palette.background,
     ) {
         HorizontalPager(
             state = pagerState,
@@ -332,12 +410,21 @@ private fun LauncherApp(
                     onCameraClick = onCameraClick,
                 )
 
-                else -> AppsScreen(
+                1 -> AppsScreen(
                     state = state,
                     onQueryChange = onQueryChange,
                     onAppClick = onAppClick,
                     onToggleFavorite = onToggleFavorite,
+                    onOpenSettings = { scope.launch { pagerState.animateScrollToPage(2) } },
+                )
+
+                else -> SettingsScreen(
+                    selectedLanguage = state.selectedLanguage,
+                    selectedThemeMode = state.selectedThemeMode,
                     onLanguageChange = onLanguageChange,
+                    onThemeChange = onThemeChange,
+                    onClearReminder = onClearReminder,
+                    onBackToApps = { scope.launch { pagerState.animateScrollToPage(1) } },
                 )
             }
         }
@@ -347,6 +434,14 @@ private fun LauncherApp(
                 app = app,
                 onDismiss = onLaunchDismiss,
                 onLaunchNow = { minutes -> onLaunchConfirm(app, minutes) },
+            )
+        }
+
+        state.timeoutNotice?.let { notice ->
+            TimeoutReachedDialog(
+                appLabel = notice.appLabel,
+                minutes = notice.minutes,
+                onDismiss = onTimeoutDismiss,
             )
         }
     }
@@ -364,10 +459,11 @@ private fun HomeScreen(
     onPhoneClick: () -> Unit,
     onCameraClick: () -> Unit,
 ) {
+    val palette = launcherPalette()
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(palette.background),
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -422,19 +518,19 @@ private fun AppsScreen(
     onQueryChange: (String) -> Unit,
     onAppClick: (LaunchableApp) -> Unit,
     onToggleFavorite: (LaunchableApp) -> Unit,
-    onLanguageChange: (AppLanguage) -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
+    val palette = launcherPalette()
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(palette.background),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 28.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         item {
             AppsHeader(
-                selectedLanguage = state.selectedLanguage,
-                onLanguageChange = onLanguageChange,
+                onOpenSettings = onOpenSettings,
             )
         }
         item {
@@ -471,6 +567,7 @@ private fun AppsScreen(
 
 @Composable
 private fun ClockHeader(onClick: () -> Unit) {
+    val palette = launcherPalette()
     var now by remember { mutableStateOf(Date()) }
     val batteryLevel by rememberBatteryLevel()
     val context = LocalContext.current
@@ -512,7 +609,7 @@ private fun ClockHeader(onClick: () -> Unit) {
                 val sweepAngle = 360f * (batteryLevel / 100f)
 
                 drawArc(
-                    color = Color(0xFF242424),
+                    color = palette.inputBorderUnfocused,
                     startAngle = -90f,
                     sweepAngle = 360f,
                     useCenter = false,
@@ -522,7 +619,7 @@ private fun ClockHeader(onClick: () -> Unit) {
                 )
 
                 drawArc(
-                    color = Color.White,
+                    color = palette.textPrimary,
                     startAngle = -90f,
                     sweepAngle = sweepAngle,
                     useCenter = false,
@@ -535,14 +632,14 @@ private fun ClockHeader(onClick: () -> Unit) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = timeText,
-                    color = Color.White,
+                    color = palette.textPrimary,
                     fontSize = 40.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = dateText.replaceFirstChar { it.titlecase(locale) },
-                    color = Color(0xFFD0D0D0),
+                    color = palette.textSecondary,
                     fontSize = 16.sp,
                     textAlign = TextAlign.Center,
                     lineHeight = 18.sp,
@@ -591,8 +688,9 @@ private fun readBatteryLevel(
 private fun EmptyFavoritesCard(
     onAddFavoritesClick: () -> Unit,
 ) {
+    val palette = launcherPalette()
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF151515)),
+        colors = CardDefaults.cardColors(containerColor = palette.surface),
         shape = RoundedCornerShape(18.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -602,19 +700,19 @@ private fun EmptyFavoritesCard(
         ) {
             Text(
                 text = stringResource(R.string.home_empty_title),
-                color = Color.White,
+                color = palette.textPrimary,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
                 text = stringResource(R.string.home_empty_subtitle),
-                color = Color(0xFFCFCFCF),
+                color = palette.textSecondary,
                 style = MaterialTheme.typography.bodyMedium,
             )
             OutlinedButton(onClick = onAddFavoritesClick) {
                 Text(
                     text = stringResource(R.string.home_empty_cta),
-                    color = Color.White,
+                    color = palette.textPrimary,
                 )
             }
         }
@@ -623,9 +721,9 @@ private fun EmptyFavoritesCard(
 
 @Composable
 private fun AppsHeader(
-    selectedLanguage: AppLanguage,
-    onLanguageChange: (AppLanguage) -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
+    val palette = launcherPalette()
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -638,14 +736,21 @@ private fun AppsHeader(
         ) {
             Text(
                 text = stringResource(R.string.apps_title),
-                color = Color.White,
+                color = palette.textPrimary,
                 fontSize = 34.sp,
                 fontWeight = FontWeight.SemiBold,
             )
-            TextButton(onClick = { onLanguageChange(selectedLanguage.next()) }) {
+            OutlinedButton(onClick = onOpenSettings) {
+                Icon(
+                    imageVector = Icons.Rounded.Settings,
+                    contentDescription = null,
+                    tint = palette.textPrimary,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = stringResource(R.string.language_picker, selectedLanguage.shortLabel),
-                    color = Color(0xFFDADADA),
+                    text = stringResource(R.string.settings_title),
+                    color = palette.textPrimary,
                 )
             }
         }
@@ -653,23 +758,180 @@ private fun AppsHeader(
 }
 
 @Composable
-private fun AppsTipCard(appCount: Int) {
+private fun SettingsScreen(
+    selectedLanguage: AppLanguage,
+    selectedThemeMode: ThemeMode,
+    onLanguageChange: (AppLanguage) -> Unit,
+    onThemeChange: (ThemeMode) -> Unit,
+    onClearReminder: () -> Unit,
+    onBackToApps: () -> Unit,
+) {
+    val palette = launcherPalette()
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(palette.background),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_title),
+                    color = palette.textPrimary,
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                TextButton(onClick = onBackToApps) {
+                    Text(
+                        text = stringResource(R.string.settings_back_to_apps),
+                        color = palette.textSecondary,
+                    )
+                }
+            }
+        }
+
+        item {
+            SettingsCard(title = stringResource(R.string.settings_theme_title)) {
+                Text(
+                    text = stringResource(R.string.settings_theme_subtitle),
+                    color = palette.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                ThemeMode.entries.forEach { mode ->
+                    val selected = selectedThemeMode == mode
+                    OutlinedButton(
+                        onClick = { onThemeChange(mode) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = mode.fromStorageLabel(LocalContext.current),
+                            modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.Start,
+                            color = palette.textPrimary,
+                        )
+                        if (selected) {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = null,
+                                tint = palette.textPrimary,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            SettingsCard(title = stringResource(R.string.settings_language_title)) {
+                Text(
+                    text = stringResource(R.string.settings_language_subtitle),
+                    color = palette.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                AppLanguage.entries.forEach { language ->
+                    val selected = selectedLanguage == language
+                    OutlinedButton(
+                        onClick = { onLanguageChange(language) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.language_picker, language.shortLabel),
+                            modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.Start,
+                            color = palette.textPrimary,
+                        )
+                        if (selected) {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = null,
+                                tint = palette.textPrimary,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            SettingsCard(title = stringResource(R.string.settings_usage_title)) {
+                Text(
+                    text = stringResource(R.string.settings_usage_subtitle),
+                    color = palette.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = onClearReminder,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_clear_reminder),
+                        color = palette.textPrimary,
+                    )
+                }
+            }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun SettingsCard(
+    title: String,
+    content: @Composable () -> Unit,
+) {
+    val palette = launcherPalette()
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF181818)),
+        colors = CardDefaults.cardColors(containerColor = palette.surface),
+        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = title,
+                color = palette.textPrimary,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            content()
+        }
+    }
+}
+
+@Composable
+private fun AppsTipCard(appCount: Int) {
+    val palette = launcherPalette()
+    Card(
+        colors = CardDefaults.cardColors(containerColor = palette.surface),
         shape = RoundedCornerShape(18.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
             Text(
                 text = stringResource(R.string.apps_card_title),
-                color = Color.White,
+                color = palette.textPrimary,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.apps_count, appCount),
-                color = Color(0xFFCFCFCF),
+                color = palette.textSecondary,
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
@@ -682,9 +944,10 @@ private fun BottomShortcuts(
     onCameraClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val palette = launcherPalette()
     Row(
         modifier = modifier
-            .background(Color.Black)
+            .background(palette.background)
             .padding(vertical = 0.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
@@ -693,7 +956,7 @@ private fun BottomShortcuts(
             Icon(
                 imageVector = Icons.Rounded.Call,
                 contentDescription = null,
-                tint = Color.White,
+                tint = palette.textPrimary,
                 modifier = Modifier.size(28.dp),
             )
         }
@@ -701,7 +964,7 @@ private fun BottomShortcuts(
             Icon(
                 imageVector = Icons.Rounded.PhotoCamera,
                 contentDescription = null,
-                tint = Color.White,
+                tint = palette.textPrimary,
                 modifier = Modifier.size(28.dp),
             )
         }
@@ -713,30 +976,31 @@ private fun SearchBox(
     query: String,
     onQueryChange: (String) -> Unit,
 ) {
+    val palette = launcherPalette()
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
         placeholder = {
-            Text(stringResource(R.string.search_placeholder), color = Color(0xFF8D8D8D))
+            Text(stringResource(R.string.search_placeholder), color = palette.textMuted)
         },
         leadingIcon = {
             Icon(
                 imageVector = Icons.Outlined.Search,
                 contentDescription = null,
-                tint = Color.White,
+                tint = palette.textPrimary,
             )
         },
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = Color(0xFF101010),
-            unfocusedContainerColor = Color(0xFF101010),
-            focusedBorderColor = Color(0xFFBDBDBD),
-            unfocusedBorderColor = Color(0xFF4A4A4A),
-            focusedTextColor = Color.White,
-            unfocusedTextColor = Color.White,
-            cursorColor = Color.White,
+            focusedContainerColor = palette.inputBackground,
+            unfocusedContainerColor = palette.inputBackground,
+            focusedBorderColor = palette.inputBorderFocused,
+            unfocusedBorderColor = palette.inputBorderUnfocused,
+            focusedTextColor = palette.textPrimary,
+            unfocusedTextColor = palette.textPrimary,
+            cursorColor = palette.textPrimary,
         ),
         shape = RoundedCornerShape(16.dp),
     )
@@ -744,8 +1008,9 @@ private fun SearchBox(
 
 @Composable
 private fun EmptyState(query: String) {
+    val palette = launcherPalette()
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF151515)),
+        colors = CardDefaults.cardColors(containerColor = palette.surface),
         shape = RoundedCornerShape(18.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -755,7 +1020,7 @@ private fun EmptyState(query: String) {
             } else {
                 stringResource(R.string.no_results_for, query)
             },
-            color = Color(0xFFDADADA),
+            color = palette.textSecondary,
             modifier = Modifier.padding(18.dp),
         )
     }
@@ -784,6 +1049,7 @@ private fun AppRow(
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
 ) {
+    val palette = launcherPalette()
     AppNameRow(
         app = app,
         titleSize = 26.sp,
@@ -795,7 +1061,7 @@ private fun AppRow(
                 Icon(
                     imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
                     contentDescription = null,
-                    tint = if (isFavorite) Color.White else Color(0xFF727272),
+                    tint = if (isFavorite) palette.textPrimary else palette.iconMuted,
                 )
             }
         },
@@ -812,6 +1078,7 @@ private fun AppNameRow(
     onLongClick: (() -> Unit)? = null,
     trailing: (@Composable (() -> Unit))?,
 ) {
+    val palette = launcherPalette()
     val context = LocalContext.current
     val packageManager = context.packageManager
     val iconBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(
@@ -855,14 +1122,14 @@ private fun AppNameRow(
             Spacer(
                 modifier = Modifier
                     .size(28.dp)
-                    .background(Color(0xFF2A2A2A), RoundedCornerShape(8.dp)),
+                    .background(palette.inputBorderUnfocused, RoundedCornerShape(8.dp)),
             )
         }
         Spacer(modifier = Modifier.size(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = app.label,
-                color = Color.White,
+                color = palette.textPrimary,
                 fontSize = titleSize,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -870,7 +1137,7 @@ private fun AppNameRow(
             if (showPackage) {
                 Text(
                     text = app.packageName,
-                    color = Color(0xFF888888),
+                    color = palette.textMuted,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -884,16 +1151,12 @@ private fun AppNameRow(
 }
 
 @Composable
-private fun MinimalLauncherTheme(content: @Composable () -> Unit) {
-    MaterialTheme(content = content)
-}
-
-@Composable
 private fun LaunchIntentDialog(
     app: LaunchableApp,
     onDismiss: () -> Unit,
     onLaunchNow: (Int?) -> Unit,
 ) {
+    val palette = launcherPalette()
     BackHandler(onBack = onDismiss)
 
     Box(
@@ -917,13 +1180,13 @@ private fun LaunchIntentDialog(
             ) {
                 Text(
                     text = app.label,
-                    color = Color.White,
+                    color = palette.textPrimary,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
                     text = stringResource(R.string.launch_dialog_question),
-                    color = Color(0xFFD0D0D0),
+                    color = palette.textSecondary,
                     fontSize = 16.sp,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -941,7 +1204,7 @@ private fun LaunchIntentDialog(
                     horizontalArrangement = Arrangement.End,
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text(stringResource(R.string.cancel), color = Color(0xFFB5B5B5))
+                        Text(stringResource(R.string.cancel), color = palette.textMuted)
                     }
                 }
             }
@@ -954,6 +1217,7 @@ private fun QuickTimeButton(
     label: String,
     onClick: () -> Unit,
 ) {
+    val palette = launcherPalette()
     OutlinedButton(
         onClick = onClick,
         modifier = Modifier.width(92.dp),
@@ -961,8 +1225,58 @@ private fun QuickTimeButton(
         Text(
             text = label,
             textAlign = TextAlign.Center,
-            color = Color.White,
+            color = palette.textPrimary,
         )
+    }
+}
+
+@Composable
+private fun TimeoutReachedDialog(
+    appLabel: String,
+    minutes: Int,
+    onDismiss: () -> Unit,
+) {
+    val palette = launcherPalette()
+    BackHandler(onBack = onDismiss)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xE6000000)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1212)),
+            shape = RoundedCornerShape(24.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(22.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.reminder_title),
+                    color = Color(0xFFFFB4AB),
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = stringResource(R.string.timeout_blocking_message, minutes, appLabel),
+                    color = Color(0xFFE4D6D2),
+                    fontSize = 17.sp,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    OutlinedButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.timeout_acknowledge), color = palette.textPrimary)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -972,12 +1286,16 @@ private object ReminderScheduler {
         appLabel: String,
         delayMinutes: Int,
     ) {
+        resetActiveReminder(context)
+
         val triggerAtMillis = System.currentTimeMillis() + delayMinutes * 60_000L
+        val requestCode = (System.currentTimeMillis() % Int.MAX_VALUE).toInt()
+        val notificationId = requestCode
         val intent = Intent(context, ReminderReceiver::class.java).apply {
             putExtra(ReminderReceiver.EXTRA_APP_LABEL, appLabel)
             putExtra(ReminderReceiver.EXTRA_MINUTES, delayMinutes)
+            putExtra(ReminderReceiver.EXTRA_NOTIFICATION_ID, notificationId)
         }
-        val requestCode = (System.currentTimeMillis() % Int.MAX_VALUE).toInt()
         val pendingIntent = PendingIntent.getBroadcast(
             context,
             requestCode,
@@ -991,5 +1309,66 @@ private object ReminderScheduler {
             triggerAtMillis,
             pendingIntent,
         )
+
+        ReminderSessionTracker.saveSession(
+            context = context,
+            requestCode = requestCode,
+            notificationId = notificationId,
+        )
+    }
+
+    fun resetActiveReminder(context: Context) {
+        val session = ReminderSessionTracker.loadSession(context) ?: return
+
+        val intent = Intent(context, ReminderReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            session.requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.cancel(pendingIntent)
+        pendingIntent.cancel()
+
+        NotificationManagerCompat.from(context).cancel(session.notificationId)
+        ReminderSessionTracker.clearSession(context)
+    }
+}
+
+private object ReminderSessionTracker {
+    private const val PREFS_NAME = "reminder_session"
+    private const val KEY_REQUEST_CODE = "request_code"
+    private const val KEY_NOTIFICATION_ID = "notification_id"
+
+    data class Session(
+        val requestCode: Int,
+        val notificationId: Int,
+    )
+
+    fun saveSession(context: Context, requestCode: Int, notificationId: Int) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putInt(KEY_REQUEST_CODE, requestCode)
+            .putInt(KEY_NOTIFICATION_ID, notificationId)
+            .apply()
+    }
+
+    fun loadSession(context: Context): Session? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (!prefs.contains(KEY_REQUEST_CODE) || !prefs.contains(KEY_NOTIFICATION_ID)) return null
+        return Session(
+            requestCode = prefs.getInt(KEY_REQUEST_CODE, -1),
+            notificationId = prefs.getInt(KEY_NOTIFICATION_ID, -1),
+        )
+    }
+
+    fun clearSession(context: Context) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .remove(KEY_REQUEST_CODE)
+            .remove(KEY_NOTIFICATION_ID)
+            .apply()
     }
 }

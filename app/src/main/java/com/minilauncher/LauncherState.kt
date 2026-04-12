@@ -22,7 +22,14 @@ data class LauncherUiState(
     val filteredApps: List<LaunchableApp> = emptyList(),
     val favoritePackages: List<String> = emptyList(),
     val pendingLaunchApp: LaunchableApp? = null,
+    val timeoutNotice: TimeoutNotice? = null,
     val selectedLanguage: AppLanguage = AppLanguage.SPANISH,
+    val selectedThemeMode: ThemeMode = ThemeMode.DARK,
+)
+
+data class TimeoutNotice(
+    val appLabel: String,
+    val minutes: Int,
 )
 
 data class LaunchableApp(

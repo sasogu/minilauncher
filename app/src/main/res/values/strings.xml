@@ -21,10 +21,23 @@
     <string name="cancel">Cancelar</string>
 
     <string name="language_picker">Idioma: %1$s</string>
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_back_to_apps">Volver</string>
+    <string name="settings_language_title">Idioma</string>
+    <string name="settings_language_subtitle">Selecciona el idioma de la interfaz.</string>
+    <string name="settings_theme_title">Apariencia</string>
+    <string name="settings_theme_subtitle">Elige entre modo oscuro y modo claro.</string>
+    <string name="theme_dark">Oscuro</string>
+    <string name="theme_light">Claro</string>
+    <string name="settings_usage_title">Uso y recordatorios</string>
+    <string name="settings_usage_subtitle">Limpia avisos pendientes si ya dejaste de usar la app lanzada.</string>
+    <string name="settings_clear_reminder">Resetear recordatorio activo</string>
 
     <string name="reminder_default_app">esta app</string>
     <string name="reminder_title">Tiempo cumplido</string>
     <string name="reminder_content">Llevas %1$d min usando %2$s</string>
+    <string name="timeout_blocking_message">Se acabaron los %1$d min para %2$s. Vuelve cuando quieras, pero con intención.</string>
+    <string name="timeout_acknowledge">Entendido</string>
     <string name="reminder_channel_name">Recordatorios de uso</string>
     <string name="reminder_channel_description">Avisos para tomar conciencia del tiempo de uso</string>
 </resources>

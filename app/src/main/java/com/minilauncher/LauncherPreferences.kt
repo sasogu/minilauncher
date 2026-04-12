@@ -27,6 +27,7 @@ val Context.launcherDataStore: DataStore<Preferences> by preferencesDataStore(
 object LauncherPreferenceKeys {
     val languageTag = stringPreferencesKey("language_tag")
     val favoritePackagesOrder = stringPreferencesKey("favorite_packages_order")
+    val themeMode = stringPreferencesKey("theme_mode")
 }
 
 fun DataStore<Preferences>.safeData(): Flow<Preferences> {
