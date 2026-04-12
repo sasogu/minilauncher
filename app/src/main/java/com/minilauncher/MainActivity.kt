@@ -20,7 +20,9 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -103,7 +105,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
@@ -156,7 +157,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        WindowCompat.setDecorFitsSystemWindows(window, false)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
@@ -301,12 +301,19 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun updateSystemBars(themeMode: ThemeMode) {
-        val barColor = when (themeMode) {
-            ThemeMode.DARK -> Color.Black
-            ThemeMode.LIGHT -> Color(0xFFF3F4F6)
+        val navigationBarScrim = when (themeMode) {
+            ThemeMode.DARK -> Color.Black.toArgb()
+            ThemeMode.LIGHT -> Color(0xFFF3F4F6).toArgb()
         }
-        window.statusBarColor = barColor.toArgb()
-        window.navigationBarColor = barColor.toArgb()
+        val statusBarStyle = when (themeMode) {
+            ThemeMode.DARK -> SystemBarStyle.dark(Color.Transparent.toArgb())
+            ThemeMode.LIGHT -> SystemBarStyle.light(Color.Transparent.toArgb(), navigationBarScrim)
+        }
+        val navigationBarStyle = when (themeMode) {
+            ThemeMode.DARK -> SystemBarStyle.dark(navigationBarScrim)
+            ThemeMode.LIGHT -> SystemBarStyle.light(navigationBarScrim, navigationBarScrim)
+        }
+        enableEdgeToEdge(statusBarStyle, navigationBarStyle)
     }
 
     private fun loadApps() {
