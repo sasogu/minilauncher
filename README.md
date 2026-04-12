@@ -4,9 +4,7 @@ Launcher minimalista para Android, pensado para reducir fricción, ruido visual 
 
 ## Estado
 
-Version publicada: `0.1.0`
-
-Proxima version en desarrollo: `0.2.0`
+Version publicada: `0.2.0`
 
 Incluye:
 
@@ -21,6 +19,8 @@ Incluye:
 - recordatorio local opcional tras el tiempo elegido
 - idioma configurable por usuario (espanol, valenciano e ingles)
 - cache de iconos y carga incremental de aplicaciones
+- selector de tema claro/oscuro desde ajustes
+- permiso de superposicion guiado para mejorar la vuelta al launcher al terminar el tiempo
 
 ## Idiomas
 
@@ -119,8 +119,8 @@ Los recordatorios de uso se generan localmente en el dispositivo.
 
 Release publicada para inicio de alta en F-Droid:
 
-- tag: `v0.1.0`
-- release: `https://github.com/sasogu/minilauncher/releases/tag/v0.1.0`
+- tag: `v0.2.0`
+- release: `https://github.com/sasogu/minilauncher/releases/tag/v0.2.0`
 
 
 ## Roadmap

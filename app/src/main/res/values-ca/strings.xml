@@ -30,7 +30,7 @@
     <string name="theme_dark">Fosc</string>
     <string name="theme_light">Clar</string>
     <string name="settings_usage_title">Us i recordatoris</string>
-    <string name="settings_usage_subtitle">Neteja avisos pendents si ja has deixat d\'usar l\'app llançada.</string>
+    <string name="settings_usage_subtitle">Quan s\'acabe el temps, Minilauncher enviarà un avís i bloquejarà la reobertura d\'eixa app des del launcher fins que ho confirmes o afegisques més temps.</string>
     <string name="settings_clear_reminder">Reiniciar recordatori actiu</string>
 
     <string name="reminder_default_app">esta app</string>

@@ -134,9 +134,7 @@ Actualmente la app incluye:
 La version `0.2.0` deberia quedar cerrada cuando se cumpla al menos esto:
 
 - pantalla de ajustes funcional
-- selector de idioma movido a ajustes
-- soporte de formato 12/24 horas
-- apps ocultas persistentes
+- selector de idioma movido a ajustes```
 - tests ampliados sobre la nueva logica de estado
 - changelog y flujo de release repetibles sin pasos manuales innecesarios
 

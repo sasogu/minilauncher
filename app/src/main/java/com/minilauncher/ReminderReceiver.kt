@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -41,17 +40,11 @@ class ReminderReceiver : BroadcastReceiver() {
         }
 
         val launcherIntent = Intent(localizedContext, MainActivity::class.java).apply {
+            putExtra(EXTRA_PACKAGE_NAME, packageName)
             putExtra(EXTRA_APP_LABEL, appLabel)
             putExtra(EXTRA_MINUTES, minutes)
             putExtra(EXTRA_TIMEOUT_REACHED, true)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        }
-
-        try {
-            // Bring launcher to foreground as soon as the selected time ends.
-            localizedContext.startActivity(launcherIntent)
-        } catch (exception: Exception) {
-            Log.w("ReminderReceiver", "Could not foreground launcher on timeout", exception)
         }
 
         val contentPendingIntent = PendingIntent.getActivity(
@@ -83,7 +76,7 @@ class ReminderReceiver : BroadcastReceiver() {
         val channel = NotificationChannel(
             CHANNEL_ID,
             context.getString(R.string.reminder_channel_name),
-            NotificationManager.IMPORTANCE_DEFAULT,
+            NotificationManager.IMPORTANCE_HIGH,
         ).apply {
             description = context.getString(R.string.reminder_channel_description)
         }

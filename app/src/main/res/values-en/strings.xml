@@ -30,7 +30,7 @@
     <string name="theme_dark">Dark</string>
     <string name="theme_light">Light</string>
     <string name="settings_usage_title">Usage and reminders</string>
-    <string name="settings_usage_subtitle">Clear pending alerts if you already stopped using the launched app.</string>
+    <string name="settings_usage_subtitle">When time is up, Minilauncher sends a reminder and blocks reopening that app from the launcher until you acknowledge it or add more time.</string>
     <string name="settings_clear_reminder">Reset active reminder</string>
 
     <string name="reminder_default_app">this app</string>

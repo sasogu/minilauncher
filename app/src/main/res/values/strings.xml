@@ -30,7 +30,7 @@
     <string name="theme_dark">Oscuro</string>
     <string name="theme_light">Claro</string>
     <string name="settings_usage_title">Uso y recordatorios</string>
-    <string name="settings_usage_subtitle">Limpia avisos pendientes si ya dejaste de usar la app lanzada.</string>
+    <string name="settings_usage_subtitle">Cuando termine el tiempo, Minilauncher enviará un aviso y bloqueará la reapertura de esa app desde el launcher hasta que lo confirmes o añadas más tiempo.</string>
     <string name="settings_clear_reminder">Resetear recordatorio activo</string>
 
     <string name="reminder_default_app">esta app</string>
