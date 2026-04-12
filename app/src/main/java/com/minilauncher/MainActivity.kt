@@ -256,6 +256,16 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun promptAppLaunch(app: LaunchableApp) {
+        val blocked = UsageBlockStore.loadBlocked(this)
+        if (blocked?.packageName == app.packageName) {
+            uiState.value = uiState.value.copy(
+                timeoutNotice = TimeoutNotice(
+                    appLabel = blocked.appLabel,
+                    minutes = blocked.minutes,
+                ),
+            )
+            return
+        }
         uiState.value = uiState.value.copy(pendingLaunchApp = app)
     }
 
@@ -270,6 +280,7 @@ class MainActivity : ComponentActivity() {
 
     private fun clearActiveReminderFromSettings() {
         ReminderScheduler.resetActiveReminder(this)
+        UsageBlockStore.clear(this)
         uiState.value = uiState.value.copy(timeoutNotice = null)
     }
 
@@ -296,6 +307,7 @@ class MainActivity : ComponentActivity() {
             ensureNotificationPermission()
             ReminderScheduler.scheduleReminder(
                 context = this,
+                packageName = app.packageName,
                 appLabel = app.label,
                 delayMinutes = durationMinutes,
             )
@@ -1283,6 +1295,7 @@ private fun TimeoutReachedDialog(
 private object ReminderScheduler {
     fun scheduleReminder(
         context: Context,
+        packageName: String,
         appLabel: String,
         delayMinutes: Int,
     ) {
@@ -1292,6 +1305,7 @@ private object ReminderScheduler {
         val requestCode = (System.currentTimeMillis() % Int.MAX_VALUE).toInt()
         val notificationId = requestCode
         val intent = Intent(context, ReminderReceiver::class.java).apply {
+            putExtra(ReminderReceiver.EXTRA_PACKAGE_NAME, packageName)
             putExtra(ReminderReceiver.EXTRA_APP_LABEL, appLabel)
             putExtra(ReminderReceiver.EXTRA_MINUTES, delayMinutes)
             putExtra(ReminderReceiver.EXTRA_NOTIFICATION_ID, notificationId)

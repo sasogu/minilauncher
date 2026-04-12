@@ -27,8 +27,18 @@ class ReminderReceiver : BroadcastReceiver() {
         val appLabel = intent.getStringExtra(EXTRA_APP_LABEL).orEmpty().ifBlank {
             localizedContext.getString(R.string.reminder_default_app)
         }
+        val packageName = intent.getStringExtra(EXTRA_PACKAGE_NAME).orEmpty()
         val minutes = intent.getIntExtra(EXTRA_MINUTES, 0)
         val notificationId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, (System.currentTimeMillis() % Int.MAX_VALUE).toInt())
+
+        if (packageName.isNotBlank()) {
+            UsageBlockStore.markBlocked(
+                context = localizedContext,
+                packageName = packageName,
+                appLabel = appLabel,
+                minutes = minutes,
+            )
+        }
 
         val launcherIntent = Intent(localizedContext, MainActivity::class.java).apply {
             putExtra(EXTRA_APP_LABEL, appLabel)
@@ -81,6 +91,7 @@ class ReminderReceiver : BroadcastReceiver() {
     }
 
     companion object {
+        const val EXTRA_PACKAGE_NAME = "extra_package_name"
         const val EXTRA_APP_LABEL = "extra_app_label"
         const val EXTRA_MINUTES = "extra_minutes"
         const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
