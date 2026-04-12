@@ -23,6 +23,11 @@ Incluye:
 - idioma configurable por usuario (espanol, valenciano e ingles)
 - cache de iconos y carga incremental de aplicaciones
 - selector de tema claro/oscuro desde ajustes
+- apps ocultas con restauracion desde ajustes
+- hint de reordenacion de favoritas descartable
+- mejoras de accesibilidad (targets tactiles minimos y descripciones para TalkBack)
+- pulido de contraste en textos/iconos secundarios
+- barra inferior ajustada para distintos tamanos de pantalla
 - permiso de superposicion guiado para mejorar la vuelta al launcher al terminar el tiempo
 
 ## Idiomas
@@ -40,15 +45,17 @@ El idioma se puede cambiar desde ajustes.
 - Android nativo
 - DataStore Preferences
 - JUnit para tests unitarios
+- AndroidX Test + Compose UI Test para tests instrumentados minimos
 
 ## Arquitectura
 
-La lógica de estado se está separando progresivamente de la UI.
+La logica de estado se separo de la UI para reducir acoplamiento.
 
 Actualmente:
 
-- la UI principal vive en `MainActivity`
-- el estado y la lógica de datos del launcher viven en `LauncherState.kt`
+- `MainActivity` orquesta efectos del sistema (intents, permisos, ciclo de vida)
+- `LauncherViewModel` centraliza estado y acciones/eventos de UI
+- `LauncherState.kt` concentra logica de dominio del launcher
 - preferencias persistentes usan `DataStore`
 
 Esto facilita pruebas, mantenimiento y futuras features.
@@ -64,6 +71,20 @@ Tests unitarios:
 ```bash
 ./gradlew testDebugUnitTest
 ```
+
+Tests instrumentados (dispositivo/emulador):
+
+```bash
+./gradlew connectedDebugAndroidTest
+```
+
+Nota: en algunos dispositivos puede aparecer confirmacion de instalacion del APK de pruebas.
+
+## Rendimiento
+
+- Carga de apps incremental para mejorar respuesta percibida.
+- Precache limitado de iconos visibles para acelerar primer render del listado.
+- Metricas de primera carga vs recarga en logs (`LauncherPerformance`).
 
 ## Release interna
 
