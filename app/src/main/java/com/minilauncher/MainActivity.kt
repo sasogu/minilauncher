@@ -156,6 +156,7 @@ class MainActivity : ComponentActivity() {
                     onLaunchDismiss = ::dismissLaunchPrompt,
                     onLaunchConfirm = ::confirmLaunch,
                     onTimeoutDismiss = ::dismissTimeoutNotice,
+                    onTimeoutAddFiveMinutes = ::extendBlockedAppByFiveMinutes,
                     onLanguageChange = ::onLanguageChange,
                     onThemeChange = ::onThemeChange,
                     onClearReminder = ::clearActiveReminderFromSettings,
@@ -249,7 +250,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openApp(app: LaunchableApp) {
-        val intent = packageManager.getLaunchIntentForPackage(app.packageName)
+        openApp(app.packageName)
+    }
+
+    private fun openApp(packageName: String) {
+        val intent = packageManager.getLaunchIntentForPackage(packageName)
         if (intent != null) {
             startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
@@ -262,6 +267,7 @@ class MainActivity : ComponentActivity() {
                 timeoutNotice = TimeoutNotice(
                     appLabel = blocked.appLabel,
                     minutes = blocked.minutes,
+                    packageName = blocked.packageName,
                 ),
             )
             return
@@ -284,6 +290,20 @@ class MainActivity : ComponentActivity() {
         uiState.value = uiState.value.copy(timeoutNotice = null)
     }
 
+    private fun extendBlockedAppByFiveMinutes() {
+        val blocked = UsageBlockStore.loadBlocked(this) ?: return
+        ensureNotificationPermission()
+        UsageBlockStore.clear(this)
+        ReminderScheduler.scheduleReminder(
+            context = this,
+            packageName = blocked.packageName,
+            appLabel = blocked.appLabel,
+            delayMinutes = 5,
+        )
+        uiState.value = uiState.value.copy(timeoutNotice = null)
+        openApp(blocked.packageName)
+    }
+
     private fun handleTimeoutIntent(intent: Intent?) {
         if (intent?.getBooleanExtra(ReminderReceiver.EXTRA_TIMEOUT_REACHED, false) != true) return
         skipReminderResetOnNextResume = true
@@ -296,6 +316,7 @@ class MainActivity : ComponentActivity() {
             timeoutNotice = TimeoutNotice(
                 appLabel = appLabel,
                 minutes = minutes,
+                packageName = intent.getStringExtra(ReminderReceiver.EXTRA_PACKAGE_NAME),
             ),
         )
 
@@ -386,6 +407,7 @@ private fun LauncherApp(
     onLaunchDismiss: () -> Unit = {},
     onLaunchConfirm: (LaunchableApp, Int?) -> Unit = { _, _ -> },
     onTimeoutDismiss: () -> Unit = {},
+    onTimeoutAddFiveMinutes: () -> Unit = {},
     onLanguageChange: (AppLanguage) -> Unit = {},
     onThemeChange: (ThemeMode) -> Unit = {},
     onClearReminder: () -> Unit = {},
@@ -453,6 +475,8 @@ private fun LauncherApp(
             TimeoutReachedDialog(
                 appLabel = notice.appLabel,
                 minutes = notice.minutes,
+                showAddFiveMinutes = !notice.packageName.isNullOrBlank(),
+                onAddFiveMinutes = onTimeoutAddFiveMinutes,
                 onDismiss = onTimeoutDismiss,
             )
         }
@@ -1246,6 +1270,8 @@ private fun QuickTimeButton(
 private fun TimeoutReachedDialog(
     appLabel: String,
     minutes: Int,
+    showAddFiveMinutes: Boolean,
+    onAddFiveMinutes: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val palette = launcherPalette()
@@ -1281,8 +1307,13 @@ private fun TimeoutReachedDialog(
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
                 ) {
+                    if (showAddFiveMinutes) {
+                        OutlinedButton(onClick = onAddFiveMinutes) {
+                            Text(stringResource(R.string.timeout_extend_5m), color = palette.textPrimary)
+                        }
+                    }
                     OutlinedButton(onClick = onDismiss) {
                         Text(stringResource(R.string.timeout_acknowledge), color = palette.textPrimary)
                     }

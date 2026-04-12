@@ -37,6 +37,7 @@
     <string name="reminder_title">Temps complit</string>
     <string name="reminder_content">Portes %1$d min utilitzant %2$s</string>
     <string name="timeout_blocking_message">S\'han acabat els %1$d min per a %2$s. Torna quan vulgues, pero amb intenció.</string>
+    <string name="timeout_extend_5m">+5 min</string>
     <string name="timeout_acknowledge">Entes</string>
     <string name="reminder_channel_name">Recordatoris d\'ús</string>
     <string name="reminder_channel_description">Avisos per a prendre consciència del temps d\'ús</string>

@@ -37,6 +37,7 @@
     <string name="reminder_title">Tiempo cumplido</string>
     <string name="reminder_content">Llevas %1$d min usando %2$s</string>
     <string name="timeout_blocking_message">Se acabaron los %1$d min para %2$s. Vuelve cuando quieras, pero con intención.</string>
+    <string name="timeout_extend_5m">+5 min</string>
     <string name="timeout_acknowledge">Entendido</string>
     <string name="reminder_channel_name">Recordatorios de uso</string>
     <string name="reminder_channel_description">Avisos para tomar conciencia del tiempo de uso</string>

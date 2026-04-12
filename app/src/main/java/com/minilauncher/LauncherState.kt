@@ -30,6 +30,7 @@ data class LauncherUiState(
 data class TimeoutNotice(
     val appLabel: String,
     val minutes: Int,
+    val packageName: String? = null,
 )
 
 data class LaunchableApp(

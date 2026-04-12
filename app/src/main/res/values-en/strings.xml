@@ -37,6 +37,7 @@
     <string name="reminder_title">Time is up</string>
     <string name="reminder_content">You have spent %1$d min using %2$s</string>
     <string name="timeout_blocking_message">Your %1$d min for %2$s are over. Come back when you want, but with intention.</string>
+    <string name="timeout_extend_5m">+5 min</string>
     <string name="timeout_acknowledge">Got it</string>
     <string name="reminder_channel_name">Usage reminders</string>
     <string name="reminder_channel_description">Notifications to help you be mindful of usage time</string>
