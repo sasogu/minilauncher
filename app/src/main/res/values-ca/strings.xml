@@ -6,6 +6,7 @@
     <string name="home_empty_title">No tens favorites encara</string>
     <string name="home_empty_subtitle">Marca les apps mes usades per a tindre-les aci.</string>
     <string name="home_empty_cta">Afegir favorites</string>
+    <string name="home_favorites_reorder_hint">Tip: mantín pulsada una favorita per a moure-la a l\'inici.</string>
     <string name="favorite_limit_reached">Nomes pots fixar %1$d aplicacions.</string>
     <string name="search_placeholder">Buscar aplicació</string>
     <string name="no_apps_found">No es troben aplicacions.</string>
@@ -13,6 +14,11 @@
     <string name="app_actions_title">Accions de l\'aplicació</string>
     <string name="app_actions_app_info">Obrir info de l\'app</string>
     <string name="app_actions_uninstall">Desinstal·lar</string>
+    <string name="app_action_toggle_favorite">Marcar o desmarcar favorita</string>
+    <string name="app_action_hide_app">Ocultar aplicació</string>
+    <string name="shortcut_phone">Telèfon</string>
+    <string name="shortcut_web_search">Cerca web</string>
+    <string name="shortcut_camera">Càmera</string>
 
     <string name="launch_dialog_question">Quant de temps penses usar-la?</string>
     <string name="duration_5m">5 min</string>
@@ -36,6 +42,12 @@
     <string name="settings_usage_subtitle">Quan s\'acabe el temps, Minilauncher enviarà un avís i bloquejarà la reobertura d\'eixa app des del launcher fins que ho confirmes o afegisques més temps.</string>
     <string name="settings_clear_reminder">Reiniciar recordatori actiu</string>
     <string name="settings_usage_prompt_label">Diàleg de temps en obrir apps</string>
+    <string name="settings_hidden_apps_title">Apps ocultes</string>
+    <string name="settings_hidden_apps_subtitle">Restaura apps ocultes per a tornar a mostrar-les en la llista principal.</string>
+    <string name="settings_hidden_apps_empty">No hi ha apps ocultes.</string>
+    <string name="settings_hidden_apps_restore_all">Restaurar totes</string>
+    <string name="hidden_app_snackbar_message_suffix">oculta</string>
+    <string name="hidden_app_snackbar_undo">Desfer</string>
     <string name="web_search_hint">Cerca en internet...</string>
     <string name="web_search_button">Cerca</string>
 

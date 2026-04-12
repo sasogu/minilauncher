@@ -64,4 +64,37 @@ class DataStorePersistenceTest {
 
         assertEquals(AppLanguage.SPANISH, store.loadLanguage())
     }
+
+    @Test
+    fun hiddenAppsStore_hide_and_restore_single_package() = runTest {
+        val dataStore = createTestPreferencesDataStore("hidden-single")
+        val store = HiddenAppsStore(dataStore)
+
+        assertEquals(listOf("org.example.mail"), store.hide("org.example.mail"))
+        assertEquals(emptyList<String>(), store.restore("org.example.mail"))
+    }
+
+    @Test
+    fun hiddenAppsStore_loadHiddenPackages_preserves_saved_order() = runTest {
+        val dataStore = createTestPreferencesDataStore("hidden-order")
+        val store = HiddenAppsStore(dataStore)
+
+        store.hide("org.example.one")
+        store.hide("org.example.two")
+
+        val reloaded = HiddenAppsStore(dataStore).loadHiddenPackages()
+
+        assertEquals(listOf("org.example.one", "org.example.two"), reloaded)
+    }
+
+    @Test
+    fun hiddenAppsStore_restoreAll_clears_all_packages() = runTest {
+        val dataStore = createTestPreferencesDataStore("hidden-restore-all")
+        val store = HiddenAppsStore(dataStore)
+
+        store.hide("org.example.one")
+        store.hide("org.example.two")
+
+        assertEquals(emptyList<String>(), store.restoreAll())
+    }
 }

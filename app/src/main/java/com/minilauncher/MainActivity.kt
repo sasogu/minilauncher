@@ -23,6 +23,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -42,7 +43,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
@@ -53,6 +56,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.PhotoCamera
@@ -66,11 +71,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -93,7 +102,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -106,12 +117,8 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -140,14 +147,7 @@ private fun lunarPhaseEmoji(date: Date = Date()): String {
 }
 
 class MainActivity : ComponentActivity() {
-    private val appsRepository by lazy { AppsRepository(packageManager) }
-    private val favoritesStore by lazy { FavoritesStore(applicationContext.launcherDataStore) }
-    private val launcherStateStore by lazy { LauncherStateStore(appsRepository, favoritesStore) }
-    private val languageStore by lazy { LanguageStore(applicationContext.launcherDataStore) }
-    private val themeStore by lazy { ThemeStore(applicationContext.launcherDataStore) }
-    private val usagePromptStore by lazy { UsagePromptStore(applicationContext.launcherDataStore) }
-    private val uiState = MutableStateFlow(LauncherUiState())
-    private var loadAppsJob: Job? = null
+    private val launcherViewModel: LauncherViewModel by viewModels()
     private var skipReminderResetOnNextResume = false
 
     override fun attachBaseContext(newBase: Context) {
@@ -161,22 +161,12 @@ class MainActivity : ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
         }
 
-        val language = languageStore.loadLanguageBlocking()
-        val themeMode = themeStore.loadThemeModeBlocking()
-        val usagePromptEnabled = usagePromptStore.loadBlocking()
-        uiState.value = uiState.value.copy(
-            selectedLanguage = language,
-            selectedThemeMode = themeMode,
-            usagePromptEnabled = usagePromptEnabled,
-        )
-        updateSystemBars(themeMode)
+        updateSystemBars(launcherViewModel.uiState.value.selectedThemeMode)
         enterImmersiveMode()
         handleTimeoutIntent(intent)
 
-        loadApps()
-
         setContent {
-            val state by uiState.asStateFlow().collectAsStateWithLifecycle()
+            val state by launcherViewModel.uiState.collectAsStateWithLifecycle()
             MinimalLauncherTheme(themeMode = state.selectedThemeMode) {
                 LauncherApp(
                     state = state,
@@ -185,7 +175,11 @@ class MainActivity : ComponentActivity() {
                     onAppClick = ::promptAppLaunch,
                     onClockClick = ::openAlarms,
                     onToggleFavorite = ::toggleFavorite,
+                    onHideApp = ::hideApp,
+                    onUndoHideApp = ::restoreHiddenApp,
+                    onHiddenAppNoticeConsumed = ::onHiddenAppNoticeConsumed,
                     onPromoteFavorite = ::promoteFavorite,
+                    onDismissHomeReorderHint = ::dismissHomeReorderHint,
                     onPhoneClick = ::openPhone,
                     onCameraClick = ::openCamera,
                     onLaunchDismiss = ::dismissLaunchPrompt,
@@ -196,6 +190,8 @@ class MainActivity : ComponentActivity() {
                     onThemeChange = ::onThemeChange,
                     onClearReminder = ::clearActiveReminderFromSettings,
                     onUsagePromptToggle = ::onUsagePromptToggle,
+                    onRestoreHiddenApp = ::restoreHiddenApp,
+                    onRestoreAllHiddenApps = ::restoreAllHiddenApps,
                     onOpenWebSearch = ::onOpenWebSearch,
                     onOpenAppInfo = ::openAppInfo,
                     onWebSearch = ::openWebSearch,
@@ -217,10 +213,10 @@ class MainActivity : ComponentActivity() {
             skipReminderResetOnNextResume = false
         } else {
             ReminderScheduler.resetActiveReminder(this)
-            uiState.value = uiState.value.copy(timeoutNotice = null)
+            launcherViewModel.dispatch(LauncherUiAction.TimeoutNoticeChanged(null))
         }
         enterImmersiveMode()
-        loadApps()
+        launcherViewModel.dispatch(LauncherUiAction.RefreshApps)
     }
 
     private fun enterImmersiveMode() {
@@ -232,26 +228,23 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun onQueryChange(query: String) {
-        uiState.value = launcherStateStore.onQueryChange(uiState.value, query)
+        launcherViewModel.dispatch(LauncherUiAction.QueryChanged(query))
     }
 
     private fun onHomeQueryChange(query: String) {
-        uiState.value = launcherStateStore.onHomeQueryChange(uiState.value, query)
+        launcherViewModel.dispatch(LauncherUiAction.HomeQueryChanged(query))
     }
 
     private fun onLanguageChange(language: AppLanguage) {
-        val currentLanguage = uiState.value.selectedLanguage
+        val currentLanguage = launcherViewModel.uiState.value.selectedLanguage
         if (currentLanguage == language) return
 
-        lifecycleScope.launch {
-            languageStore.saveLanguage(language)
-            uiState.value = uiState.value.copy(selectedLanguage = language)
-            recreate()
-        }
+        launcherViewModel.dispatch(LauncherUiAction.LanguageChanged(language))
+        recreate()
     }
 
     private fun onOpenWebSearch() {
-        uiState.value = uiState.value.copy(showWebSearch = true)
+        launcherViewModel.dispatch(LauncherUiAction.OpenWebSearch)
     }
 
     private fun openWebSearch(query: String) {
@@ -279,25 +272,19 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun dismissWebSearch() {
-        uiState.value = uiState.value.copy(showWebSearch = false)
+        launcherViewModel.dispatch(LauncherUiAction.DismissWebSearch)
     }
 
     private fun onUsagePromptToggle(enabled: Boolean) {
-        lifecycleScope.launch {
-            usagePromptStore.save(enabled)
-            uiState.value = uiState.value.copy(usagePromptEnabled = enabled)
-        }
+        launcherViewModel.dispatch(LauncherUiAction.UsagePromptToggled(enabled))
     }
 
     private fun onThemeChange(themeMode: ThemeMode) {
-        val currentTheme = uiState.value.selectedThemeMode
+        val currentTheme = launcherViewModel.uiState.value.selectedThemeMode
         if (currentTheme == themeMode) return
 
-        lifecycleScope.launch {
-            themeStore.saveThemeMode(themeMode)
-            uiState.value = uiState.value.copy(selectedThemeMode = themeMode)
-            updateSystemBars(themeMode)
-        }
+        launcherViewModel.dispatch(LauncherUiAction.ThemeChanged(themeMode))
+        updateSystemBars(themeMode)
     }
 
     private fun updateSystemBars(themeMode: ThemeMode) {
@@ -316,23 +303,32 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge(statusBarStyle, navigationBarStyle)
     }
 
-    private fun loadApps() {
-        loadAppsJob?.cancel()
-        loadAppsJob = lifecycleScope.launch(Dispatchers.IO) {
-            launcherStateStore.loadApps(uiState)
-        }
-    }
-
     private fun toggleFavorite(app: LaunchableApp) {
-        lifecycleScope.launch {
-            uiState.value = launcherStateStore.toggleFavorite(uiState.value, app)
-        }
+        launcherViewModel.dispatch(LauncherUiAction.ToggleFavorite(app))
     }
 
     private fun promoteFavorite(app: LaunchableApp) {
-        lifecycleScope.launch {
-            uiState.value = launcherStateStore.promoteFavorite(uiState.value, app)
-        }
+        launcherViewModel.dispatch(LauncherUiAction.PromoteFavorite(app))
+    }
+
+    private fun dismissHomeReorderHint() {
+        launcherViewModel.dispatch(LauncherUiAction.DismissHomeReorderHint)
+    }
+
+    private fun hideApp(app: LaunchableApp) {
+        launcherViewModel.dispatch(LauncherUiAction.HideApp(app))
+    }
+
+    private fun restoreHiddenApp(app: LaunchableApp) {
+        launcherViewModel.dispatch(LauncherUiAction.RestoreHiddenApp(app))
+    }
+
+    private fun restoreAllHiddenApps() {
+        launcherViewModel.dispatch(LauncherUiAction.RestoreAllHiddenApps)
+    }
+
+    private fun onHiddenAppNoticeConsumed() {
+        launcherViewModel.dispatch(LauncherUiAction.HiddenAppNoticeConsumed)
     }
 
     private fun openApp(app: LaunchableApp) {
@@ -349,35 +345,37 @@ class MainActivity : ComponentActivity() {
     private fun promptAppLaunch(app: LaunchableApp) {
         val blocked = UsageBlockStore.loadBlocked(this)
         if (blocked?.packageName == app.packageName) {
-            uiState.value = uiState.value.copy(
-                timeoutNotice = TimeoutNotice(
-                    appLabel = blocked.appLabel,
-                    minutes = blocked.minutes,
-                    packageName = blocked.packageName,
+            launcherViewModel.dispatch(
+                LauncherUiAction.TimeoutNoticeChanged(
+                    TimeoutNotice(
+                        appLabel = blocked.appLabel,
+                        minutes = blocked.minutes,
+                        packageName = blocked.packageName,
+                    ),
                 ),
             )
             return
         }
-        if (!uiState.value.usagePromptEnabled) {
+        if (!launcherViewModel.uiState.value.usagePromptEnabled) {
             openApp(app)
             return
         }
-        uiState.value = uiState.value.copy(pendingLaunchApp = app)
+        launcherViewModel.dispatch(LauncherUiAction.PendingLaunchChanged(app))
     }
 
     private fun dismissLaunchPrompt() {
-        uiState.value = uiState.value.copy(pendingLaunchApp = null)
+        launcherViewModel.dispatch(LauncherUiAction.PendingLaunchChanged(null))
     }
 
     private fun dismissTimeoutNotice() {
         ReminderScheduler.resetActiveReminder(this)
-        uiState.value = uiState.value.copy(timeoutNotice = null)
+        launcherViewModel.dispatch(LauncherUiAction.TimeoutNoticeChanged(null))
     }
 
     private fun clearActiveReminderFromSettings() {
         ReminderScheduler.resetActiveReminder(this)
         UsageBlockStore.clear(this)
-        uiState.value = uiState.value.copy(timeoutNotice = null)
+        launcherViewModel.dispatch(LauncherUiAction.TimeoutNoticeChanged(null))
     }
 
     private fun extendBlockedAppByFiveMinutes() {
@@ -390,7 +388,7 @@ class MainActivity : ComponentActivity() {
             appLabel = blocked.appLabel,
             delayMinutes = 5,
         )
-        uiState.value = uiState.value.copy(timeoutNotice = null)
+        launcherViewModel.dispatch(LauncherUiAction.TimeoutNoticeChanged(null))
         openApp(blocked.packageName)
     }
 
@@ -402,11 +400,13 @@ class MainActivity : ComponentActivity() {
             getString(R.string.reminder_default_app)
         }
         val minutes = intent.getIntExtra(ReminderReceiver.EXTRA_MINUTES, 0)
-        uiState.value = uiState.value.copy(
-            timeoutNotice = TimeoutNotice(
-                appLabel = appLabel,
-                minutes = minutes,
-                packageName = intent.getStringExtra(ReminderReceiver.EXTRA_PACKAGE_NAME),
+        launcherViewModel.dispatch(
+            LauncherUiAction.TimeoutNoticeChanged(
+                TimeoutNotice(
+                    appLabel = appLabel,
+                    minutes = minutes,
+                    packageName = intent.getStringExtra(ReminderReceiver.EXTRA_PACKAGE_NAME),
+                ),
             ),
         )
 
@@ -491,7 +491,11 @@ private fun LauncherApp(
     onAppClick: (LaunchableApp) -> Unit,
     onClockClick: () -> Unit,
     onToggleFavorite: (LaunchableApp) -> Unit,
+    onHideApp: (LaunchableApp) -> Unit,
+    onUndoHideApp: (LaunchableApp) -> Unit,
+    onHiddenAppNoticeConsumed: () -> Unit,
     onPromoteFavorite: (LaunchableApp) -> Unit,
+    onDismissHomeReorderHint: () -> Unit,
     onPhoneClick: () -> Unit,
     onCameraClick: () -> Unit,
     onLaunchDismiss: () -> Unit = {},
@@ -502,6 +506,8 @@ private fun LauncherApp(
     onThemeChange: (ThemeMode) -> Unit = {},
     onClearReminder: () -> Unit = {},
     onUsagePromptToggle: (Boolean) -> Unit = {},
+    onRestoreHiddenApp: (LaunchableApp) -> Unit = {},
+    onRestoreAllHiddenApps: () -> Unit = {},
     onOpenWebSearch: () -> Unit = {},
     onOpenAppInfo: (LaunchableApp) -> Unit = {},
     onWebSearch: (String) -> Unit = {},
@@ -510,6 +516,7 @@ private fun LauncherApp(
     val palette = launcherPalette()
     val pagerState = rememberPagerState(initialPage = 0) { 3 }
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     val favoriteApps = remember(state.allApps, state.favoritePackages) {
         val appsByPackage = state.allApps.associateBy { it.packageName }
         state.favoritePackages.mapNotNull { appsByPackage[it] }
@@ -522,68 +529,100 @@ private fun LauncherApp(
         modifier = Modifier.fillMaxSize(),
         color = palette.background,
     ) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-        ) { page ->
-            when (page) {
-                0 -> HomeScreen(
-                    favoriteApps = filteredFavoriteApps,
-                    homeQuery = state.homeQuery,
-                    onHomeQueryChange = onHomeQueryChange,
-                    onAppClick = onAppClick,
-                    onPromoteFavorite = onPromoteFavorite,
-                    onClockClick = onClockClick,
-                    onAddFavoritesClick = { scope.launch { pagerState.animateScrollToPage(1) } },
-                    onPhoneClick = onPhoneClick,
-                    onCameraClick = onCameraClick,
-                    onOpenWebSearch = onOpenWebSearch,
-                )
+        Box(modifier = Modifier.fillMaxSize()) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+            ) { page ->
+                when (page) {
+                    0 -> HomeScreen(
+                        favoriteApps = filteredFavoriteApps,
+                        showFavoritesReorderHint = state.showHomeReorderHint,
+                        homeQuery = state.homeQuery,
+                        onHomeQueryChange = onHomeQueryChange,
+                        onAppClick = onAppClick,
+                        onPromoteFavorite = onPromoteFavorite,
+                        onDismissFavoritesReorderHint = onDismissHomeReorderHint,
+                        onClockClick = onClockClick,
+                        onAddFavoritesClick = { scope.launch { pagerState.animateScrollToPage(1) } },
+                        onPhoneClick = onPhoneClick,
+                        onCameraClick = onCameraClick,
+                        onOpenWebSearch = onOpenWebSearch,
+                    )
 
-                1 -> AppsScreen(
-                    state = state,
-                    onQueryChange = onQueryChange,
-                    onAppClick = onAppClick,
-                    onToggleFavorite = onToggleFavorite,
-                    onOpenAppInfo = onOpenAppInfo,
-                    onOpenSettings = { scope.launch { pagerState.animateScrollToPage(2) } },
-                )
+                    1 -> AppsScreen(
+                        state = state,
+                        onQueryChange = onQueryChange,
+                        onAppClick = onAppClick,
+                        onToggleFavorite = onToggleFavorite,
+                        onHideApp = onHideApp,
+                        onOpenAppInfo = onOpenAppInfo,
+                        onOpenSettings = { scope.launch { pagerState.animateScrollToPage(2) } },
+                    )
 
-                else -> SettingsScreen(
-                    selectedLanguage = state.selectedLanguage,
-                    selectedThemeMode = state.selectedThemeMode,
-                    usagePromptEnabled = state.usagePromptEnabled,
-                    onLanguageChange = onLanguageChange,
-                    onThemeChange = onThemeChange,
-                    onClearReminder = onClearReminder,
-                    onUsagePromptToggle = onUsagePromptToggle,
-                    onBackToApps = { scope.launch { pagerState.animateScrollToPage(1) } },
+                    else -> SettingsScreen(
+                        selectedLanguage = state.selectedLanguage,
+                        selectedThemeMode = state.selectedThemeMode,
+                        usagePromptEnabled = state.usagePromptEnabled,
+                        onLanguageChange = onLanguageChange,
+                        onThemeChange = onThemeChange,
+                        onClearReminder = onClearReminder,
+                        onUsagePromptToggle = onUsagePromptToggle,
+                        hiddenApps = state.hiddenApps,
+                        onRestoreHiddenApp = onRestoreHiddenApp,
+                        onRestoreAllHiddenApps = onRestoreAllHiddenApps,
+                        onBackToApps = { scope.launch { pagerState.animateScrollToPage(1) } },
+                    )
+                }
+            }
+
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+            )
+
+            state.pendingLaunchApp?.let { app ->
+                LaunchIntentDialog(
+                    app = app,
+                    onDismiss = onLaunchDismiss,
+                    onLaunchNow = { minutes -> onLaunchConfirm(app, minutes) },
                 )
             }
-        }
 
-        state.pendingLaunchApp?.let { app ->
-            LaunchIntentDialog(
-                app = app,
-                onDismiss = onLaunchDismiss,
-                onLaunchNow = { minutes -> onLaunchConfirm(app, minutes) },
-            )
-        }
+            state.timeoutNotice?.let { notice ->
+                TimeoutReachedDialog(
+                    appLabel = notice.appLabel,
+                    minutes = notice.minutes,
+                    showAddFiveMinutes = !notice.packageName.isNullOrBlank(),
+                    onAddFiveMinutes = onTimeoutAddFiveMinutes,
+                    onDismiss = onTimeoutDismiss,
+                )
+            }
+            if (state.showWebSearch) {
+                WebSearchDialog(
+                    onSearch = onWebSearch,
+                    onDismiss = onWebSearchDismiss,
+                )
+            }
 
-        state.timeoutNotice?.let { notice ->
-            TimeoutReachedDialog(
-                appLabel = notice.appLabel,
-                minutes = notice.minutes,
-                showAddFiveMinutes = !notice.packageName.isNullOrBlank(),
-                onAddFiveMinutes = onTimeoutAddFiveMinutes,
-                onDismiss = onTimeoutDismiss,
-            )
-        }
-        if (state.showWebSearch) {
-            WebSearchDialog(
-                onSearch = onWebSearch,
-                onDismiss = onWebSearchDismiss,
-            )
+            state.lastHiddenApp?.let { hiddenApp ->
+                val hiddenAppUndoLabel = stringResource(R.string.hidden_app_snackbar_undo)
+                val hiddenAppMessage = "${hiddenApp.label} ${stringResource(R.string.hidden_app_snackbar_message_suffix)}"
+                LaunchedEffect(hiddenApp.packageName) {
+                    val result = snackbarHostState.showSnackbar(
+                        message = hiddenAppMessage,
+                        actionLabel = hiddenAppUndoLabel,
+                        duration = SnackbarDuration.Short,
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        onUndoHideApp(hiddenApp)
+                    }
+                    onHiddenAppNoticeConsumed()
+                }
+            }
         }
     }
 }
@@ -591,10 +630,12 @@ private fun LauncherApp(
 @Composable
 private fun HomeScreen(
     favoriteApps: List<LaunchableApp>,
+    showFavoritesReorderHint: Boolean,
     homeQuery: String,
     onHomeQueryChange: (String) -> Unit,
     onAppClick: (LaunchableApp) -> Unit,
     onPromoteFavorite: (LaunchableApp) -> Unit,
+    onDismissFavoritesReorderHint: () -> Unit,
     onClockClick: () -> Unit,
     onAddFavoritesClick: () -> Unit,
     onPhoneClick: () -> Unit,
@@ -621,6 +662,11 @@ private fun HomeScreen(
                     onQueryChange = onHomeQueryChange,
                 )
             }
+            if (favoriteApps.size > 1 && showFavoritesReorderHint) {
+                item {
+                    HomeFavoritesHintCard(onDismiss = onDismissFavoritesReorderHint)
+                }
+            }
             if (favoriteApps.isEmpty()) {
                 item {
                     EmptyFavoritesCard(onAddFavoritesClick = onAddFavoritesClick)
@@ -629,6 +675,7 @@ private fun HomeScreen(
                 items(
                     items = favoriteApps,
                     key = { app -> app.packageName },
+                    contentType = { "favorite_row" },
                 ) { app ->
                     FavoriteRow(
                         app = app,
@@ -661,10 +708,12 @@ private fun AppsScreen(
     onQueryChange: (String) -> Unit,
     onAppClick: (LaunchableApp) -> Unit,
     onToggleFavorite: (LaunchableApp) -> Unit,
+    onHideApp: (LaunchableApp) -> Unit,
     onOpenAppInfo: (LaunchableApp) -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     val palette = launcherPalette()
+    val favoritePackagesSet = remember(state.favoritePackages) { state.favoritePackages.toSet() }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -694,18 +743,57 @@ private fun AppsScreen(
             items(
                 items = state.filteredApps,
                 key = { it.packageName },
+                contentType = { "app_row" },
             ) { app ->
                 AppRow(
                     app = app,
-                    isFavorite = app.packageName in state.favoritePackages,
+                    isFavorite = app.packageName in favoritePackagesSet,
                     onClick = { onAppClick(app) },
                     onOpenAppInfo = { onOpenAppInfo(app) },
                     onToggleFavorite = { onToggleFavorite(app) },
+                    onHideApp = { onHideApp(app) },
                 )
             }
         }
         item {
             Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun HomeFavoritesHintCard(
+    onDismiss: () -> Unit,
+) {
+    val palette = launcherPalette()
+    Card(
+        colors = CardDefaults.cardColors(containerColor = palette.surface),
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = null,
+                tint = palette.textMuted,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.home_favorites_reorder_hint),
+                color = palette.textSecondary,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = stringResource(R.string.timeout_acknowledge),
+                    color = palette.textPrimary,
+                )
+            }
         }
     }
 }
@@ -912,13 +1000,17 @@ private fun SettingsScreen(
     selectedLanguage: AppLanguage,
     selectedThemeMode: ThemeMode,
     usagePromptEnabled: Boolean,
+    hiddenApps: List<LaunchableApp>,
     onLanguageChange: (AppLanguage) -> Unit,
     onThemeChange: (ThemeMode) -> Unit,
     onClearReminder: () -> Unit,
     onUsagePromptToggle: (Boolean) -> Unit,
+    onRestoreHiddenApp: (LaunchableApp) -> Unit,
+    onRestoreAllHiddenApps: () -> Unit,
     onBackToApps: () -> Unit,
 ) {
     val palette = launcherPalette()
+    val haptic = LocalHapticFeedback.current
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -1050,6 +1142,57 @@ private fun SettingsScreen(
         }
 
         item {
+            SettingsCard(title = stringResource(R.string.settings_hidden_apps_title)) {
+                Text(
+                    text = stringResource(R.string.settings_hidden_apps_subtitle),
+                    color = palette.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                if (hiddenApps.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.settings_hidden_apps_empty),
+                        color = palette.textMuted,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                } else {
+                    hiddenApps.forEach { app ->
+                        AppNameRow(
+                            app = app,
+                            titleSize = 20.sp,
+                            showPackage = true,
+                            onClick = {},
+                            trailing = {
+                                IconButton(onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onRestoreHiddenApp(app)
+                                }) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Visibility,
+                                        contentDescription = null,
+                                        tint = palette.textPrimary,
+                                    )
+                                }
+                            },
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onRestoreAllHiddenApps()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.settings_hidden_apps_restore_all),
+                            color = palette.textPrimary,
+                        )
+                    }
+                }
+            }
+        }
+
+        item {
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
@@ -1114,33 +1257,45 @@ private fun BottomShortcuts(
     modifier: Modifier = Modifier,
 ) {
     val palette = launcherPalette()
+    val maxBarWidth = 420.dp
     Row(
         modifier = modifier
-            .background(palette.background)
-            .padding(vertical = 0.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+            .fillMaxWidth()
+            .widthIn(max = maxBarWidth)
+            .background(palette.surface, RoundedCornerShape(20.dp))
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onPhoneClick) {
+        IconButton(
+            onClick = onPhoneClick,
+            modifier = Modifier.sizeIn(minWidth = 56.dp, minHeight = 56.dp),
+        ) {
             Icon(
                 imageVector = Icons.Rounded.Call,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.shortcut_phone),
                 tint = palette.textPrimary,
                 modifier = Modifier.size(28.dp),
             )
         }
-        IconButton(onClick = onWebSearchClick) {
+        IconButton(
+            onClick = onWebSearchClick,
+            modifier = Modifier.sizeIn(minWidth = 56.dp, minHeight = 56.dp),
+        ) {
             Icon(
                 imageVector = Icons.Outlined.Search,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.shortcut_web_search),
                 tint = palette.textPrimary,
                 modifier = Modifier.size(28.dp),
             )
         }
-        IconButton(onClick = onCameraClick) {
+        IconButton(
+            onClick = onCameraClick,
+            modifier = Modifier.sizeIn(minWidth = 56.dp, minHeight = 56.dp),
+        ) {
             Icon(
                 imageVector = Icons.Rounded.PhotoCamera,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.shortcut_camera),
                 tint = palette.textPrimary,
                 modifier = Modifier.size(28.dp),
             )
@@ -1212,6 +1367,7 @@ private fun FavoriteRow(
     AppNameRow(
         app = app,
         titleSize = 28.sp,
+        titleMaxLines = 1,
         showPackage = false,
         onClick = onClick,
         onLongClick = onLongClick,
@@ -1226,27 +1382,45 @@ private fun AppRow(
     onClick: () -> Unit,
     onOpenAppInfo: () -> Unit,
     onToggleFavorite: () -> Unit,
+    onHideApp: () -> Unit,
 ) {
     val palette = launcherPalette()
+    val haptic = LocalHapticFeedback.current
     AppNameRow(
         app = app,
-        titleSize = 26.sp,
+        titleSize = 23.sp,
+        titleMaxLines = 2,
+        iconSize = 24.dp,
+        iconToTextSpacing = 10.dp,
         showPackage = true,
         onClick = onClick,
         onLongClick = null,
         trailing = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onToggleFavorite) {
+                IconButton(onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onToggleFavorite()
+                }) {
                     Icon(
                         imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.app_action_toggle_favorite),
                         tint = if (isFavorite) palette.textPrimary else palette.iconMuted,
                     )
                 }
                 IconButton(onClick = onOpenAppInfo) {
                     Icon(
                         imageVector = Icons.Outlined.Info,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.app_actions_app_info),
+                        tint = palette.iconMuted,
+                    )
+                }
+                IconButton(onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onHideApp()
+                }) {
+                    Icon(
+                        imageVector = Icons.Outlined.VisibilityOff,
+                        contentDescription = stringResource(R.string.app_action_hide_app),
                         tint = palette.iconMuted,
                     )
                 }
@@ -1260,6 +1434,9 @@ private fun AppRow(
 private fun AppNameRow(
     app: LaunchableApp,
     titleSize: androidx.compose.ui.unit.TextUnit,
+    titleMaxLines: Int = 1,
+    iconSize: androidx.compose.ui.unit.Dp = 28.dp,
+    iconToTextSpacing: androidx.compose.ui.unit.Dp = 14.dp,
     showPackage: Boolean,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
@@ -1292,33 +1469,34 @@ private fun AppNameRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .sizeIn(minHeight = 56.dp)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick,
             )
-            .padding(vertical = 4.dp),
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (iconBitmap != null) {
             Image(
                 bitmap = iconBitmap!!,
                 contentDescription = null,
-                modifier = Modifier.size(28.dp),
+                modifier = Modifier.size(iconSize),
             )
         } else {
             Spacer(
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(iconSize)
                     .background(palette.inputBorderUnfocused, RoundedCornerShape(8.dp)),
             )
         }
-        Spacer(modifier = Modifier.size(14.dp))
+        Spacer(modifier = Modifier.size(iconToTextSpacing))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = app.label,
                 color = palette.textPrimary,
                 fontSize = titleSize,
-                maxLines = 1,
+                maxLines = titleMaxLines,
                 overflow = TextOverflow.Ellipsis,
             )
             if (showPackage) {

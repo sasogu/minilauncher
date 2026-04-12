@@ -6,6 +6,7 @@
     <string name="home_empty_title">No tienes favoritas todavia</string>
     <string name="home_empty_subtitle">Marca tus apps mas usadas para tenerlas aqui.</string>
     <string name="home_empty_cta">Anadir favoritas</string>
+    <string name="home_favorites_reorder_hint">Tip: manten pulsada una favorita para moverla al inicio.</string>
     <string name="favorite_limit_reached">Solo puedes fijar %1$d aplicaciones.</string>
     <string name="search_placeholder">Buscar aplicacion</string>
     <string name="no_apps_found">No se encontraron aplicaciones.</string>
@@ -13,6 +14,11 @@
     <string name="app_actions_title">Acciones de la aplicación</string>
     <string name="app_actions_app_info">Abrir info de la app</string>
     <string name="app_actions_uninstall">Desinstalar</string>
+    <string name="app_action_toggle_favorite">Marcar o desmarcar favorita</string>
+    <string name="app_action_hide_app">Ocultar aplicación</string>
+    <string name="shortcut_phone">Teléfono</string>
+    <string name="shortcut_web_search">Búsqueda web</string>
+    <string name="shortcut_camera">Cámara</string>
 
     <string name="launch_dialog_question">Cuanto tiempo piensas usarla?</string>
     <string name="duration_5m">5 min</string>
@@ -36,6 +42,12 @@
     <string name="settings_usage_subtitle">Cuando termine el tiempo, Minilauncher enviará un aviso y bloqueará la reapertura de esa app desde el launcher hasta que lo confirmes o añadas más tiempo.</string>
     <string name="settings_clear_reminder">Resetear recordatorio activo</string>
     <string name="settings_usage_prompt_label">Diálogo de tiempo al abrir apps</string>
+    <string name="settings_hidden_apps_title">Apps ocultas</string>
+    <string name="settings_hidden_apps_subtitle">Restaura apps ocultas para volver a mostrarlas en la lista principal.</string>
+    <string name="settings_hidden_apps_empty">No hay apps ocultas.</string>
+    <string name="settings_hidden_apps_restore_all">Restaurar todas</string>
+    <string name="hidden_app_snackbar_message_suffix">oculta</string>
+    <string name="hidden_app_snackbar_undo">Deshacer</string>
     <string name="web_search_hint">Buscar en internet...</string>
     <string name="web_search_button">Buscar</string>
 

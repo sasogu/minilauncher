@@ -52,6 +52,7 @@ Actualmente la app incluye:
 - Persistencia de favoritas y orden de favoritas.
 - Migracion desde `SharedPreferences` a `DataStore`.
 - Persistencia de preferencia para activar/desactivar el dialogo de tiempo.
+- Persistencia de apps ocultas y restauracion desde ajustes.
 
 ### Rendimiento y arquitectura
 
@@ -72,53 +73,49 @@ Actualmente la app incluye:
 
 ### 1. Pantalla de ajustes real
 
-- Crear una pantalla de ajustes visible desde la app.
-- Mover ahi el selector de idioma.
-- Anadir formato horario 12/24h.
-- Preparar ajustes futuros sin seguir cargando la pantalla de apps.
+- [x] Crear una pantalla de ajustes visible desde la app.
+- [x] Mover ahi el selector de idioma.
+- [x] Preparar ajustes futuros sin seguir cargando la pantalla de apps.
 
 ### 2. Apps ocultas
 
-- Permitir ocultar apps desde la lista principal.
-- Crear una vista para restaurarlas.
-- Persistirlas en `DataStore`.
+- [x] Permitir ocultar apps desde la lista principal.
+- [x] Crear una vista para restaurarlas.
+- [x] Persistirlas en `DataStore`.
 
 ### 3. Pulido de favoritas
 
-- Revisar la UX de marcado de favoritas para que sea mas evidente.
-- Evaluar feedback visual o pequeno hint para descubrir la pulsacion larga en Home.
-- Ajustar limites visuales de Home cuando haya muchas favoritas.
+- [x] Revisar la UX de marcado de favoritas para que sea mas evidente.
+- [x] Evaluar feedback visual o pequeno hint para descubrir la pulsacion larga en Home.
+- [x] Anadir feedback haptico al marcar favoritas y al ocultar/restaurar apps.
+- [x] Ajustar tamano de texto/iconos en lista de apps para mostrar nombres mas completos.
+
 
 ### 4. Accesibilidad y pulido visual
 
-- Revisar tamanos tactiles minimos.
-- Revisar contraste de iconos y textos secundarios.
-- Validar el comportamiento de la barra inferior en distintos dispositivos.
-
-### 5. Pulido de gestos de Home
-
-- Ajustar umbral/sensibilidad del gesto horizontal para evitar falsos positivos.
-- Definir feedback visual minimo cuando el gesto abre la busqueda web.
+- [x] Revisar tamanos tactiles minimos.
+- [x] Revisar contraste de iconos y textos secundarios.
+- [x] Validar el comportamiento de la barra inferior en distintos dispositivos.
 
 ## Siguientes mejoras tecnicas
 
 ### 1. Arquitectura
 
-- Seguir extrayendo logica de `MainActivity`.
-- Introducir una capa mas clara de acciones/eventos de UI.
-- Evaluar si compensa introducir `ViewModel` para separar ciclo de vida y estado.
+- [x] Seguir extrayendo logica de `MainActivity`.
+- [x] Introducir una capa mas clara de acciones/eventos de UI.
+- [x] Evaluar si compensa introducir `ViewModel` para separar ciclo de vida y estado.
 
 ### 2. Testing
 
-- Anadir tests para `LauncherStateStore`.
-- Anadir tests para migracion de datos desde preferencias antiguas.
-- Anadir tests instrumentados minimos para flujos criticos.
+- [x] Anadir tests para `LauncherStateStore`.
+- [x] Anadir tests para migracion de datos desde preferencias antiguas.
+- [x] Anadir tests instrumentados minimos para flujos criticos.
 
 ### 3. Rendimiento
 
-- Medir tiempos de primera carga vs recarga.
-- Revisar si compensa precachear una cantidad limitada de iconos visibles.
-- Reducir recomposiciones innecesarias en la lista.
+- [x] Medir tiempos de primera carga vs recarga.
+- [x] Revisar si compensa precachear una cantidad limitada de iconos visibles.
+- [x] Reducir recomposiciones innecesarias en la lista.
 
 ## Backlog Fase 2
 

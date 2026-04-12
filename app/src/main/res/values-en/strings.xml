@@ -6,6 +6,7 @@
     <string name="home_empty_title">You have no favorites yet</string>
     <string name="home_empty_subtitle">Mark your most used apps to show them here.</string>
     <string name="home_empty_cta">Add favorites</string>
+    <string name="home_favorites_reorder_hint">Tip: long-press a favorite to move it to the top.</string>
     <string name="favorite_limit_reached">You can only pin %1$d apps.</string>
     <string name="search_placeholder">Search apps</string>
     <string name="no_apps_found">No applications found.</string>
@@ -13,6 +14,11 @@
     <string name="app_actions_title">App actions</string>
     <string name="app_actions_app_info">Open app info</string>
     <string name="app_actions_uninstall">Uninstall</string>
+    <string name="app_action_toggle_favorite">Toggle favorite</string>
+    <string name="app_action_hide_app">Hide app</string>
+    <string name="shortcut_phone">Phone</string>
+    <string name="shortcut_web_search">Web search</string>
+    <string name="shortcut_camera">Camera</string>
 
     <string name="launch_dialog_question">How long do you plan to use it?</string>
     <string name="duration_5m">5 min</string>
@@ -36,6 +42,12 @@
     <string name="settings_usage_subtitle">When time is up, Minilauncher sends a reminder and blocks reopening that app from the launcher until you acknowledge it or add more time.</string>
     <string name="settings_clear_reminder">Reset active reminder</string>
     <string name="settings_usage_prompt_label">Time prompt when opening apps</string>
+    <string name="settings_hidden_apps_title">Hidden apps</string>
+    <string name="settings_hidden_apps_subtitle">Restore hidden apps to show them again in the main apps list.</string>
+    <string name="settings_hidden_apps_empty">There are no hidden apps.</string>
+    <string name="settings_hidden_apps_restore_all">Restore all</string>
+    <string name="hidden_app_snackbar_message_suffix">hidden</string>
+    <string name="hidden_app_snackbar_undo">Undo</string>
     <string name="web_search_hint">Search the web...</string>
     <string name="web_search_button">Search</string>
 

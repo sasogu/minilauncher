@@ -29,6 +29,8 @@ val Context.launcherDataStore: DataStore<Preferences> by preferencesDataStore(
 object LauncherPreferenceKeys {
     val languageTag = stringPreferencesKey("language_tag")
     val favoritePackagesOrder = stringPreferencesKey("favorite_packages_order")
+    val hiddenPackages = stringPreferencesKey("hidden_packages")
+    val homeReorderHintDismissed = booleanPreferencesKey("home_reorder_hint_dismissed")
     val themeMode = stringPreferencesKey("theme_mode")
     val usagePromptEnabled = booleanPreferencesKey("usage_prompt_enabled")
 }
@@ -78,5 +80,62 @@ class UsagePromptStore(
 
     suspend fun save(enabled: Boolean) {
         dataStore.writeBoolean(LauncherPreferenceKeys.usagePromptEnabled, enabled)
+    }
+}
+
+class HiddenAppsStore(
+    private val dataStore: DataStore<Preferences>,
+) {
+    suspend fun loadHiddenPackages(): List<String> {
+        return dataStore.safeData()
+            .map { preferences -> preferences[LauncherPreferenceKeys.hiddenPackages] }
+            .first()
+            .orEmpty()
+            .split(HIDDEN_SEPARATOR)
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+    }
+
+    suspend fun hide(packageName: String): List<String> {
+        val current = loadHiddenPackages().toMutableList()
+        if (!current.contains(packageName)) {
+            current.add(packageName)
+        }
+        return save(current)
+    }
+
+    suspend fun restore(packageName: String): List<String> {
+        val current = loadHiddenPackages().toMutableList()
+        current.remove(packageName)
+        return save(current)
+    }
+
+    suspend fun restoreAll(): List<String> = save(emptyList())
+
+    private suspend fun save(values: List<String>): List<String> {
+        val cleaned = values.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+        dataStore.writeString(
+            LauncherPreferenceKeys.hiddenPackages,
+            cleaned.joinToString(HIDDEN_SEPARATOR),
+        )
+        return cleaned
+    }
+
+    private companion object {
+        const val HIDDEN_SEPARATOR = "|"
+    }
+}
+
+class HomeHintsStore(
+    private val dataStore: DataStore<Preferences>,
+) {
+    suspend fun isHomeReorderHintVisible(): Boolean {
+        val dismissed = dataStore.readBoolean(LauncherPreferenceKeys.homeReorderHintDismissed, false)
+        return !dismissed
+    }
+
+    suspend fun dismissHomeReorderHint() {
+        dataStore.writeBoolean(LauncherPreferenceKeys.homeReorderHintDismissed, true)
     }
 }
