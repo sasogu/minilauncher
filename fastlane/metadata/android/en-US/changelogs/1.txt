@@ -1,8 +1,8 @@
-- Primera version publica del launcher.
-- Home minimalista con reloj, fecha y aro de bateria.
-- Apertura de alarmas al tocar el reloj.
-- Pantalla separada para todas las aplicaciones.
-- Favoritas persistentes en la home.
-- Accesos fijos a telefono y camara.
-- Dialogo de intencion de uso antes de abrir apps.
-- Recordatorio local opcional tras el tiempo elegido.
+- First public release of the launcher.
+- Minimal home screen with clock, date, and battery ring.
+- Opens alarms when tapping the clock.
+- Separate screen for all applications.
+- Persistent favorites on the home screen.
+- Fixed shortcuts for phone and camera.
+- Intent dialog before opening apps.
+- Optional local reminder after the selected time.

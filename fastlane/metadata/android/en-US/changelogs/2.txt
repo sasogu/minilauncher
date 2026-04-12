@@ -1,11 +1,11 @@
-- Pantalla de ajustes funcional para las opciones principales.
-- Selector de idioma movido a ajustes.
-- Cambio de tema claro y oscuro.
-- Busqueda en home y en el listado completo de aplicaciones.
-- Toggle para activar o desactivar el dialogo de tiempo por app.
-- Indicador de fase lunar en la home.
-- Busqueda web rapida desde Home con gesto izquierda -> derecha.
-- Reordenacion rapida de favoritas con pulsacion larga.
-- Cache de iconos y carga incremental de aplicaciones.
-- Permiso de superposicion integrado para mejorar el retorno del launcher al vencer el tiempo.
-- Flujo de release y metadata de fastlane/F-Droid actualizados para la nueva version.
+- Functional settings screen for the main options.
+- Language selector moved to settings.
+- Light and dark theme switch.
+- Search on the home screen and in the full app list.
+- Toggle to enable or disable the per-app time dialog.
+- Moon phase indicator on the home screen.
+- Quick web search from Home with a left-to-right gesture.
+- Quick favorite reordering with long press.
+- Icon cache and incremental app loading.
+- Integrated overlay permission to improve launcher return when time runs out.
+- Fastlane and F-Droid release flow and metadata updated for the new version.

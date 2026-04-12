@@ -1,1 +1,1 @@
-Launcher minimalista para Android con favoritas y pausa consciente antes de abrir apps.
+Minimal Android launcher with favorites and a mindful pause before apps.

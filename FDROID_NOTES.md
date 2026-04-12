@@ -12,7 +12,10 @@ Estado actual para envio a F-Droid:
 
 1. Release en GitHub creada: https://github.com/sasogu/minilauncher/releases/tag/v0.2.0
 2. Changelog de fastlane actualizado para `versionCode 2`
-3. Pendiente: abrir solicitud en https://gitlab.com/fdroid/fdroiddata/-/issues con la plantilla de abajo
+3. Metadata `en-US` revisada y traducida completamente al ingles
+4. Gradle Wrapper alineado con Gradle 8.12 y `distributionSha256Sum` configurado
+5. Validacion local completada: `./gradlew testDebugUnitTest` y `./gradlew assembleRelease`
+6. Pendiente: abrir solicitud en https://gitlab.com/fdroid/fdroiddata/-/issues con la plantilla de abajo
 
 ## Datos del proyecto
 
@@ -25,6 +28,21 @@ Estado actual para envio a F-Droid:
 - Build command: ./gradlew assembleRelease
 - Min SDK: 26
 - Target SDK: 35
+
+## Verificaciones tecnicas ya hechas
+
+- `fastlane/metadata/android/en-US/short_description.txt` queda por debajo de 80 caracteres
+- `fastlane/metadata/android/en-US` esta consistente en ingles
+- `gradle-wrapper.properties` incluye `distributionSha256Sum`
+- `gradle-wrapper.jar` fue regenerado y ya no arrastra la version antigua del wrapper
+- `./gradlew testDebugUnitTest` termina correctamente
+- `./gradlew assembleRelease` termina correctamente
+
+## Observaciones para la revision
+
+- Permiso declarado: `POST_NOTIFICATIONS`, usado para recordatorios locales opcionales
+- No se detectan dependencias de Google Play Services, Firebase ni SDKs de tracking en el proyecto
+- La build release muestra warnings por APIs de color de barras del sistema deprecadas en `MainActivity`, pero no bloquean compilacion ni publicacion
 
 ## Texto sugerido para issue en fdroiddata
 
