@@ -157,6 +157,7 @@ private fun lunarPhaseText(
 
 class MainActivity : ComponentActivity() {
     private val launcherViewModel: LauncherViewModel by viewModels()
+    private val homeReturnSignal = mutableStateOf(0)
     private var skipReminderResetOnNextResume = false
     private val exportBackupLauncher =
         registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -208,6 +209,7 @@ class MainActivity : ComponentActivity() {
             MinimalLauncherTheme(themeMode = state.selectedThemeMode) {
                 LauncherApp(
                     state = state,
+                    homeReturnSignal = homeReturnSignal.value,
                     onQueryChange = ::onQueryChange,
                     onHomeQueryChange = ::onHomeQueryChange,
                     onAppClick = ::promptAppLaunch,
@@ -247,7 +249,15 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (isHomeIntent(intent)) {
+            homeReturnSignal.value += 1
+        }
         handleTimeoutIntent(intent)
+    }
+
+    private fun isHomeIntent(intent: Intent?): Boolean {
+        if (intent?.action != Intent.ACTION_MAIN) return false
+        return intent.hasCategory(Intent.CATEGORY_HOME)
     }
 
     override fun onResume() {
@@ -570,6 +580,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun LauncherApp(
     state: LauncherUiState,
+    homeReturnSignal: Int,
     onQueryChange: (String) -> Unit,
     onHomeQueryChange: (String) -> Unit,
     onAppClick: (LaunchableApp) -> Unit,
@@ -624,6 +635,12 @@ private fun LauncherApp(
             favoriteApps
         } else {
             filterApps(visibleApps, state.homeQuery)
+        }
+    }
+
+    LaunchedEffect(homeReturnSignal) {
+        if (homeReturnSignal > 0) {
+            pagerState.scrollToPage(0)
         }
     }
 
