@@ -9,6 +9,7 @@
     <string name="home_favorites_reorder_hint">Tip: long-press a favorite to move it to the top.</string>
     <string name="favorite_limit_reached">You can only pin %1$d apps.</string>
     <string name="search_placeholder">Search apps</string>
+    <string name="clear_search">Clear search</string>
     <string name="no_apps_found">No applications found.</string>
     <string name="no_results_for">No results for \"%1$s\".</string>
     <string name="app_actions_title">App actions</string>

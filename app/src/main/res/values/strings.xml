@@ -9,6 +9,7 @@
     <string name="home_favorites_reorder_hint">Tip: manten pulsada una favorita para moverla al inicio.</string>
     <string name="favorite_limit_reached">Solo puedes fijar %1$d aplicaciones.</string>
     <string name="search_placeholder">Buscar aplicacion</string>
+    <string name="clear_search">Limpiar búsqueda</string>
     <string name="no_apps_found">No se encontraron aplicaciones.</string>
     <string name="no_results_for">No hay resultados para \"%1$s\".</string>
     <string name="app_actions_title">Acciones de la aplicación</string>

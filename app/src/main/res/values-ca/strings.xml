@@ -9,6 +9,7 @@
     <string name="home_favorites_reorder_hint">Tip: mantín pulsada una favorita per a moure-la a l\'inici.</string>
     <string name="favorite_limit_reached">Nomes pots fixar %1$d aplicacions.</string>
     <string name="search_placeholder">Buscar aplicació</string>
+    <string name="clear_search">Netejar cerca</string>
     <string name="no_apps_found">No es troben aplicacions.</string>
     <string name="no_results_for">No hi ha resultats per a %1$s.</string>
     <string name="app_actions_title">Accions de l\'aplicació</string>

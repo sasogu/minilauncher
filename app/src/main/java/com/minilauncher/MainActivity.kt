@@ -53,9 +53,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Search
@@ -1699,10 +1702,12 @@ private fun SearchBox(
     onQueryChange: (String) -> Unit,
 ) {
     val palette = launcherPalette()
+    val interactionSource = remember { MutableInteractionSource() }
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
         modifier = Modifier.fillMaxWidth(),
+        interactionSource = interactionSource,
         singleLine = true,
         placeholder = {
             Text(stringResource(R.string.search_placeholder), color = palette.textMuted)
@@ -1713,6 +1718,15 @@ private fun SearchBox(
                 contentDescription = null,
                 tint = palette.textPrimary,
             )
+        },
+        trailingIcon = {
+            if (query.isNotBlank()) {
+                ClearTextButton(
+                    onClear = { onQueryChange("") },
+                    interactionSource = interactionSource,
+                    tint = palette.textPrimary,
+                )
+            }
         },
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
         colors = OutlinedTextFieldDefaults.colors(
@@ -1726,6 +1740,23 @@ private fun SearchBox(
         ),
         shape = RoundedCornerShape(16.dp),
     )
+}
+
+@Composable
+private fun ClearTextButton(
+    onClear: () -> Unit,
+    interactionSource: MutableInteractionSource,
+    tint: Color,
+) {
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val iconTint = if (isFocused) tint else tint.copy(alpha = 0.6f)
+    IconButton(onClick = onClear) {
+        Icon(
+            imageVector = Icons.Outlined.Close,
+            contentDescription = stringResource(R.string.clear_search),
+            tint = iconTint,
+        )
+    }
 }
 
 @Composable
@@ -1936,6 +1967,7 @@ private fun AppTagsDialog(
     onSave: (List<String>) -> Unit,
 ) {
     var text by rememberSaveable(app.packageName) { mutableStateOf(app.tags.joinToString(", ")) }
+    val interactionSource = remember { MutableInteractionSource() }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1945,6 +1977,16 @@ private fun AppTagsDialog(
                 value = text,
                 onValueChange = { text = it },
                 modifier = Modifier.fillMaxWidth(),
+                interactionSource = interactionSource,
+                trailingIcon = {
+                    if (text.isNotBlank()) {
+                        ClearTextButton(
+                            onClear = { text = "" },
+                            interactionSource = interactionSource,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                },
                 placeholder = {
                     Text(stringResource(R.string.tag_editor_hint))
                 },
@@ -2111,6 +2153,7 @@ private fun WebSearchDialog(
     val palette = launcherPalette()
     var query by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
+    val interactionSource = remember { MutableInteractionSource() }
     BackHandler(onBack = onDismiss)
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -2142,6 +2185,7 @@ private fun WebSearchDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(focusRequester),
+                    interactionSource = interactionSource,
                     singleLine = true,
                     placeholder = {
                         Text(stringResource(R.string.web_search_hint), color = palette.textMuted)
@@ -2152,6 +2196,15 @@ private fun WebSearchDialog(
                             contentDescription = null,
                             tint = palette.textPrimary,
                         )
+                    },
+                    trailingIcon = {
+                        if (query.isNotBlank()) {
+                            ClearTextButton(
+                                onClear = { query = "" },
+                                interactionSource = interactionSource,
+                                tint = palette.textPrimary,
+                            )
+                        }
                     },
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Sentences,
