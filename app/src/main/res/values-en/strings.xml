@@ -43,6 +43,10 @@
     <string name="settings_usage_subtitle">When time is up, Minilauncher sends a reminder and blocks reopening that app from the launcher until you acknowledge it or add more time.</string>
     <string name="settings_clear_reminder">Reset active reminder</string>
     <string name="settings_usage_prompt_label">Time prompt when opening apps</string>
+    <string name="settings_backup_title">Backup and data</string>
+    <string name="settings_backup_subtitle">Export your favorites, hidden apps, tags, and preferences to a JSON file, or import one to restore them.</string>
+    <string name="settings_backup_export">Export backup</string>
+    <string name="settings_backup_import">Import backup</string>
     <string name="settings_hidden_apps_title">Hidden apps</string>
     <string name="settings_hidden_apps_subtitle">Restore hidden apps to show them again in the main apps list.</string>
     <string name="settings_hidden_apps_empty">There are no hidden apps.</string>
@@ -60,6 +64,10 @@
     <string name="error_no_clock_app">No clock app is available.</string>
     <string name="error_no_phone_app">No phone or messaging app is available.</string>
     <string name="error_no_camera_app">No camera app is available.</string>
+    <string name="backup_export_success">Backup exported successfully.</string>
+    <string name="backup_export_error">Could not export the backup.</string>
+    <string name="backup_import_success">Backup imported successfully.</string>
+    <string name="backup_import_error">Could not import the backup.</string>
 
     <string name="reminder_default_app">this app</string>
     <string name="reminder_title">Time is up</string>

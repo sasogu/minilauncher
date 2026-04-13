@@ -43,6 +43,10 @@
     <string name="settings_usage_subtitle">Cuando termine el tiempo, Minilauncher enviará un aviso y bloqueará la reapertura de esa app desde el launcher hasta que lo confirmes o añadas más tiempo.</string>
     <string name="settings_clear_reminder">Resetear recordatorio activo</string>
     <string name="settings_usage_prompt_label">Diálogo de tiempo al abrir apps</string>
+    <string name="settings_backup_title">Backup y datos</string>
+    <string name="settings_backup_subtitle">Exporta tus favoritos, apps ocultas, etiquetas y preferencias a un archivo JSON, o importa uno para restaurarlos.</string>
+    <string name="settings_backup_export">Exportar backup</string>
+    <string name="settings_backup_import">Importar backup</string>
     <string name="settings_hidden_apps_title">Apps ocultas</string>
     <string name="settings_hidden_apps_subtitle">Restaura apps ocultas para volver a mostrarlas en la lista principal.</string>
     <string name="settings_hidden_apps_empty">No hay apps ocultas.</string>
@@ -60,6 +64,10 @@
     <string name="error_no_clock_app">No hay ninguna app de reloj disponible.</string>
     <string name="error_no_phone_app">No hay ninguna app de telefono o mensajeria disponible.</string>
     <string name="error_no_camera_app">No hay ninguna app de camara disponible.</string>
+    <string name="backup_export_success">Backup exportado correctamente.</string>
+    <string name="backup_export_error">No se pudo exportar el backup.</string>
+    <string name="backup_import_success">Backup importado correctamente.</string>
+    <string name="backup_import_error">No se pudo importar el backup.</string>
 
     <string name="reminder_default_app">esta app</string>
     <string name="reminder_title">Tiempo cumplido</string>

@@ -16,8 +16,10 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.provider.AlarmClock
 import android.provider.Settings
+import android.widget.Toast
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -119,6 +121,7 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -152,6 +155,35 @@ private fun lunarPhaseEmoji(date: Date = Date()): String {
 class MainActivity : ComponentActivity() {
     private val launcherViewModel: LauncherViewModel by viewModels()
     private var skipReminderResetOnNextResume = false
+    private val exportBackupLauncher =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+            if (uri == null) return@registerForActivityResult
+            lifecycleScope.launch {
+                runCatching {
+                    BackupManager.exportToUri(this@MainActivity, uri)
+                }.onSuccess {
+                    toast(R.string.backup_export_success)
+                }.onFailure {
+                    toast(R.string.backup_export_error)
+                }
+            }
+        }
+    private val importBackupLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri == null) return@registerForActivityResult
+            lifecycleScope.launch {
+                runCatching {
+                    BackupManager.importFromUri(this@MainActivity, uri)
+                }.onSuccess {
+                    launcherViewModel.dispatch(LauncherUiAction.ReloadPreferences)
+                    launcherViewModel.dispatch(LauncherUiAction.RefreshApps)
+                    toast(R.string.backup_import_success)
+                    recreate()
+                }.onFailure {
+                    toast(R.string.backup_import_error)
+                }
+            }
+        }
 
     override fun attachBaseContext(newBase: Context) {
         val language = LanguageStore(newBase.launcherDataStore).loadLanguageBlocking()
@@ -193,6 +225,8 @@ class MainActivity : ComponentActivity() {
                     onLanguageChange = ::onLanguageChange,
                     onThemeChange = ::onThemeChange,
                     onClearReminder = ::clearActiveReminderFromSettings,
+                    onExportBackup = ::exportBackup,
+                    onImportBackup = ::importBackup,
                     onUsagePromptToggle = ::onUsagePromptToggle,
                     onRestoreHiddenApp = ::restoreHiddenApp,
                     onRestoreAllHiddenApps = ::restoreAllHiddenApps,
@@ -289,6 +323,14 @@ class MainActivity : ComponentActivity() {
 
     private fun onUsagePromptToggle(enabled: Boolean) {
         launcherViewModel.dispatch(LauncherUiAction.UsagePromptToggled(enabled))
+    }
+
+    private fun exportBackup() {
+        exportBackupLauncher.launch("minilauncher-backup.json")
+    }
+
+    private fun importBackup() {
+        importBackupLauncher.launch(arrayOf("application/json", "text/plain"))
     }
 
     private fun onThemeChange(themeMode: ThemeMode) {
@@ -511,6 +553,10 @@ class MainActivity : ComponentActivity() {
         launcherViewModel.dispatch(LauncherUiAction.TransientMessageChanged(getString(messageRes)))
     }
 
+    private fun toast(@StringRes messageRes: Int) {
+        Toast.makeText(this, getString(messageRes), Toast.LENGTH_SHORT).show()
+    }
+
 }
 
 @Composable
@@ -536,6 +582,8 @@ private fun LauncherApp(
     onLanguageChange: (AppLanguage) -> Unit = {},
     onThemeChange: (ThemeMode) -> Unit = {},
     onClearReminder: () -> Unit = {},
+    onExportBackup: () -> Unit = {},
+    onImportBackup: () -> Unit = {},
     onUsagePromptToggle: (Boolean) -> Unit = {},
     onRestoreHiddenApp: (LaunchableApp) -> Unit = {},
     onRestoreAllHiddenApps: () -> Unit = {},
@@ -614,6 +662,8 @@ private fun LauncherApp(
                         onLanguageChange = onLanguageChange,
                         onThemeChange = onThemeChange,
                         onClearReminder = onClearReminder,
+                        onExportBackup = onExportBackup,
+                        onImportBackup = onImportBackup,
                         onUsagePromptToggle = onUsagePromptToggle,
                         hiddenApps = state.hiddenApps,
                         onRestoreHiddenApp = onRestoreHiddenApp,
@@ -1081,6 +1131,8 @@ private fun SettingsScreen(
     onLanguageChange: (AppLanguage) -> Unit,
     onThemeChange: (ThemeMode) -> Unit,
     onClearReminder: () -> Unit,
+    onExportBackup: () -> Unit,
+    onImportBackup: () -> Unit,
     onUsagePromptToggle: (Boolean) -> Unit,
     onRestoreHiddenApp: (LaunchableApp) -> Unit,
     onRestoreAllHiddenApps: () -> Unit,
@@ -1212,6 +1264,36 @@ private fun SettingsScreen(
                 ) {
                     Text(
                         text = stringResource(R.string.settings_clear_reminder),
+                        color = palette.textPrimary,
+                    )
+                }
+            }
+        }
+
+        item {
+            SettingsCard(title = stringResource(R.string.settings_backup_title)) {
+                Text(
+                    text = stringResource(R.string.settings_backup_subtitle),
+                    color = palette.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = onExportBackup,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_backup_export),
+                        color = palette.textPrimary,
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onImportBackup,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_backup_import),
                         color = palette.textPrimary,
                     )
                 }

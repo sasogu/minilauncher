@@ -4,14 +4,14 @@ Estado actual para envio a F-Droid:
 
 - Repositorio publico: https://github.com/sasogu/minilauncher
 - Branch publicado: main
-- Tag publicado: v0.2.0
+- Proximo tag: v0.3.0
 - Licencia incluida: Apache-2.0
 - Metadata fastlane base incluida
 
 ## Checklist inmediato
 
-1. Release en GitHub creada: https://github.com/sasogu/minilauncher/releases/tag/v0.2.0
-2. Changelog de fastlane actualizado para `versionCode 2`
+1. Release en GitHub creada: https://github.com/sasogu/minilauncher/releases/tag/v0.3.0
+2. Changelog de fastlane actualizado para `versionCode 3`
 3. Metadata `en-US` revisada y traducida completamente al ingles
 4. Gradle Wrapper alineado con Gradle 8.12 y `distributionSha256Sum` configurado
 5. Validacion local completada: `./gradlew testDebugUnitTest` y `./gradlew assembleRelease`
@@ -23,8 +23,8 @@ Estado actual para envio a F-Droid:
 - Application ID: com.minilauncher
 - Repo: https://github.com/sasogu/minilauncher
 - License: Apache-2.0
-- Version name: 0.2.0
-- Version code: 2
+- Version name: 0.3.0
+- Version code: 3
 - Build command: ./gradlew assembleRelease
 - Min SDK: 26
 - Target SDK: 35
@@ -58,8 +58,8 @@ Body:
 - Application ID: com.minilauncher
 - Source code: https://github.com/sasogu/minilauncher
 - License: Apache-2.0
-- Current version: 0.2.0 (versionCode 2)
-- Release: https://github.com/sasogu/minilauncher/releases/tag/v0.2.0
+- Current version: 0.3.0 (versionCode 3)
+- Release: https://github.com/sasogu/minilauncher/releases/tag/v0.3.0
 - Build command: ./gradlew assembleRelease
 - Min SDK: 26
 - Target SDK: 35
@@ -95,8 +95,8 @@ Please add my app to F-Droid.
 - Application ID: com.minilauncher
 - Source code: https://github.com/sasogu/minilauncher
 - License: Apache-2.0
-- Current version: 0.2.0 (versionCode 2)
-- Release: https://github.com/sasogu/minilauncher/releases/tag/v0.2.0
+- Current version: 0.3.0 (versionCode 3)
+- Release: https://github.com/sasogu/minilauncher/releases/tag/v0.3.0
 - Build command: ./gradlew assembleRelease
 - Min SDK: 26
 - Target SDK: 35
@@ -133,16 +133,16 @@ RepoType: git
 Repo: https://github.com/sasogu/minilauncher.git
 
 Builds:
-  - versionName: 0.2.0
-    versionCode: 2
-    commit: v0.2.0
+  - versionName: 0.3.0
+    versionCode: 3
+    commit: v0.3.0
     gradle:
       - yes
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 0.2.0
-CurrentVersionCode: 2
+CurrentVersion: 0.3.0
+CurrentVersionCode: 3
 ```
 
 Nota: el equipo de F-Droid puede ajustar esta metadata durante la revision.

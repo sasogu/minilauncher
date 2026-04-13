@@ -1,0 +1,5 @@
+- App tags with integrated search across Home and the full app list.
+- Local backup export and import from Settings.
+- Home search now includes all visible apps, not only favorites.
+- Improved app list layout with action icons moved below the text for more room.
+- Clearer feedback when clock, phone, camera, or browser apps are unavailable.

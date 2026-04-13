@@ -2,9 +2,14 @@
 
 ## Unreleased
 
-- Toggle en ajustes para activar/desactivar el dialogo de tiempo antes de abrir apps (desactivado por defecto).
-- Indicador de fase lunar en la home junto al reloj y la fecha.
-- Busqueda web rapida desde Home con gesto horizontal izquierda -> derecha y panel inferior.
+## 0.3.0
+
+- Etiquetas por aplicacion con edicion directa desde el listado.
+- Busqueda por etiquetas tanto en la home como en la pantalla completa de apps.
+- Exportacion e importacion de backup local desde ajustes.
+- Busqueda en la home ampliada a todas las apps visibles, no solo favoritas.
+- Mejor reparto visual del listado, con acciones colocadas debajo del texto para dar mas espacio a nombres largos.
+- Mensajes claros cuando faltan apps del sistema como reloj, telefono, camara o navegador.
 
 ## 0.2.0
 

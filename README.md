@@ -4,7 +4,7 @@ Launcher minimalista para Android, pensado para reducir fricción, ruido visual 
 
 ## Estado
 
-Version publicada: `0.2.0`
+Version preparada: `0.3.0`
 
 Incluye:
 
@@ -24,6 +24,8 @@ Incluye:
 - cache de iconos y carga incremental de aplicaciones
 - selector de tema claro/oscuro desde ajustes
 - apps ocultas con restauracion desde ajustes
+- etiquetas por aplicacion con busqueda integrada
+- backup local con exportacion e importacion desde ajustes
 - hint de reordenacion de favoritas descartable
 - mejoras de accesibilidad (targets tactiles minimos y descripciones para TalkBack)
 - pulido de contraste en textos/iconos secundarios
@@ -143,8 +145,8 @@ Los recordatorios de uso se generan localmente en el dispositivo.
 
 Release publicada para inicio de alta en F-Droid:
 
-- tag: `v0.2.0`
-- release: `https://github.com/sasogu/minilauncher/releases/tag/v0.2.0`
+- proxima tag: `v0.3.0`
+- proxima release: `https://github.com/sasogu/minilauncher/releases/tag/v0.3.0`
 
 
 ## Roadmap

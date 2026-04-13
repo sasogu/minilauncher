@@ -43,6 +43,10 @@
     <string name="settings_usage_subtitle">Quan s\'acabe el temps, Minilauncher enviarà un avís i bloquejarà la reobertura d\'eixa app des del launcher fins que ho confirmes o afegisques més temps.</string>
     <string name="settings_clear_reminder">Reiniciar recordatori actiu</string>
     <string name="settings_usage_prompt_label">Diàleg de temps en obrir apps</string>
+    <string name="settings_backup_title">Backup i dades</string>
+    <string name="settings_backup_subtitle">Exporta els teus favorits, apps ocultes, etiquetes i preferències a un arxiu JSON, o importa\'n un per a restaurar-les.</string>
+    <string name="settings_backup_export">Exportar backup</string>
+    <string name="settings_backup_import">Importar backup</string>
     <string name="settings_hidden_apps_title">Apps ocultes</string>
     <string name="settings_hidden_apps_subtitle">Restaura apps ocultes per a tornar a mostrar-les en la llista principal.</string>
     <string name="settings_hidden_apps_empty">No hi ha apps ocultes.</string>
@@ -60,6 +64,10 @@
     <string name="error_no_clock_app">No hi ha cap app de rellotge disponible.</string>
     <string name="error_no_phone_app">No hi ha cap app de telèfon o missatgeria disponible.</string>
     <string name="error_no_camera_app">No hi ha cap app de càmera disponible.</string>
+    <string name="backup_export_success">Backup exportat correctament.</string>
+    <string name="backup_export_error">No s\'ha pogut exportar el backup.</string>
+    <string name="backup_import_success">Backup importat correctament.</string>
+    <string name="backup_import_error">No s\'ha pogut importar el backup.</string>
 
     <string name="reminder_default_app">esta app</string>
     <string name="reminder_title">Temps complit</string>

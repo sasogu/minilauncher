@@ -28,6 +28,7 @@ sealed interface LauncherUiAction {
     data class PendingLaunchChanged(val app: LaunchableApp?) : LauncherUiAction
     data class TimeoutNoticeChanged(val notice: TimeoutNotice?) : LauncherUiAction
     data class SaveAppTags(val app: LaunchableApp, val tags: List<String>) : LauncherUiAction
+    data object ReloadPreferences : LauncherUiAction
     data class TransientMessageChanged(val message: String?) : LauncherUiAction
     data object RefreshApps : LauncherUiAction
 }
@@ -48,18 +49,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val uiState = _uiState.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            val language = languageStore.loadLanguage()
-            val themeMode = themeStore.loadThemeMode()
-            val usagePromptEnabled = usagePromptStore.load()
-            val showHomeReorderHint = homeHintsStore.isHomeReorderHintVisible()
-            _uiState.value = _uiState.value.copy(
-                selectedLanguage = language,
-                selectedThemeMode = themeMode,
-                usagePromptEnabled = usagePromptEnabled,
-                showHomeReorderHint = showHomeReorderHint,
-            )
-        }
+        reloadPreferences()
         dispatch(LauncherUiAction.RefreshApps)
     }
 
@@ -166,6 +156,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
             }
 
+            LauncherUiAction.ReloadPreferences -> {
+                reloadPreferences()
+            }
+
             is LauncherUiAction.TransientMessageChanged -> {
                 _uiState.value = _uiState.value.copy(transientMessage = action.message)
             }
@@ -201,6 +195,21 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                     Log.d(LOG_TAG, "Apps load ($phase) took ${elapsedMs}ms, refreshCount=${refreshedState.appsRefreshCount}")
                 }
             }
+        }
+    }
+
+    private fun reloadPreferences() {
+        viewModelScope.launch {
+            val language = languageStore.loadLanguage()
+            val themeMode = themeStore.loadThemeMode()
+            val usagePromptEnabled = usagePromptStore.load()
+            val showHomeReorderHint = homeHintsStore.isHomeReorderHintVisible()
+            _uiState.value = _uiState.value.copy(
+                selectedLanguage = language,
+                selectedThemeMode = themeMode,
+                usagePromptEnabled = usagePromptEnabled,
+                showHomeReorderHint = showHomeReorderHint,
+            )
         }
     }
 
