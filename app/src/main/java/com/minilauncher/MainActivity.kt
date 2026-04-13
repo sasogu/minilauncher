@@ -137,7 +137,7 @@ import androidx.annotation.StringRes
 /**
  * Devuelve una representacion compacta de la iluminacion lunar para una fecha dada.
  * Algoritmo local sin red: usa luna nueva de referencia (6 ene 2000) y periodo sinodico.
- * Se usa un icono neutro para evitar diferencias visuales entre sets de emoji.
+ * Muestra el icono de fase con orientacion correcta (creciente/menguante).
  */
 private fun lunarPhaseText(
     date: Date = Date(),
@@ -147,11 +147,22 @@ private fun lunarPhaseText(
     val synodicMs = 29.53059 * 24 * 60 * 60 * 1000
     val elapsed = (date.time - knownNewMoonMs).toDouble()
     val phase = ((elapsed % synodicMs) / synodicMs + 1.0) % 1.0
+    val phaseStep = (phase * 8).toInt()
+    val moonEmoji = when (phaseStep) {
+        0 -> "\uD83C\uDF11" // 🌑 Luna nueva
+        1 -> "\uD83C\uDF12" // 🌒 Creciente
+        2 -> "\uD83C\uDF13" // 🌓 Cuarto creciente
+        3 -> "\uD83C\uDF14" // 🌔 Gibosa creciente
+        4 -> "\uD83C\uDF15" // 🌕 Luna llena
+        5 -> "\uD83C\uDF16" // 🌖 Gibosa menguante
+        6 -> "\uD83C\uDF17" // 🌗 Cuarto menguante
+        else -> "\uD83C\uDF18" // 🌘 Menguante
+    }
     val illumination = ((1 - cos(2 * PI * phase)) / 2.0 * 100).toInt()
     return if (showPercentage) {
-        "\uD83C\uDF19 $illumination%"
+        "$moonEmoji $illumination%"
     } else {
-        "\uD83C\uDF19"
+        moonEmoji
     }
 }
 
