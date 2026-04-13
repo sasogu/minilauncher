@@ -15,6 +15,7 @@
     <string name="app_actions_app_info">Abrir info de la app</string>
     <string name="app_actions_uninstall">Desinstalar</string>
     <string name="app_action_toggle_favorite">Marcar o desmarcar favorita</string>
+    <string name="app_action_edit_tags">Editar etiquetas</string>
     <string name="app_action_hide_app">Ocultar aplicación</string>
     <string name="shortcut_phone">Teléfono</string>
     <string name="shortcut_web_search">Búsqueda web</string>
@@ -50,6 +51,10 @@
     <string name="hidden_app_snackbar_undo">Deshacer</string>
     <string name="web_search_hint">Buscar en internet...</string>
     <string name="web_search_button">Buscar</string>
+    <string name="tag_editor_title">Etiquetas de %1$s</string>
+    <string name="tag_editor_hint">Ejemplo: trabajo, lectura, mapas</string>
+    <string name="tag_editor_support">Separa las etiquetas con comas o saltos de linea.</string>
+    <string name="tag_editor_save">Guardar</string>
     <string name="error_no_browser">No hay ningun navegador disponible en este dispositivo.</string>
     <string name="error_no_app_info">No se pudo abrir la informacion de la app.</string>
     <string name="error_no_clock_app">No hay ninguna app de reloj disponible.</string>

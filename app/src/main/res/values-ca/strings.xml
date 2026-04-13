@@ -15,6 +15,7 @@
     <string name="app_actions_app_info">Obrir info de l\'app</string>
     <string name="app_actions_uninstall">Desinstal·lar</string>
     <string name="app_action_toggle_favorite">Marcar o desmarcar favorita</string>
+    <string name="app_action_edit_tags">Editar etiquetes</string>
     <string name="app_action_hide_app">Ocultar aplicació</string>
     <string name="shortcut_phone">Telèfon</string>
     <string name="shortcut_web_search">Cerca web</string>
@@ -50,6 +51,10 @@
     <string name="hidden_app_snackbar_undo">Desfer</string>
     <string name="web_search_hint">Cerca en internet...</string>
     <string name="web_search_button">Cerca</string>
+    <string name="tag_editor_title">Etiquetes de %1$s</string>
+    <string name="tag_editor_hint">Exemple: treball, lectura, mapes</string>
+    <string name="tag_editor_support">Separa les etiquetes amb comes o salts de línia.</string>
+    <string name="tag_editor_save">Guardar</string>
     <string name="error_no_browser">No hi ha cap navegador disponible en este dispositiu.</string>
     <string name="error_no_app_info">No ha sigut possible obrir la informació de la app.</string>
     <string name="error_no_clock_app">No hi ha cap app de rellotge disponible.</string>

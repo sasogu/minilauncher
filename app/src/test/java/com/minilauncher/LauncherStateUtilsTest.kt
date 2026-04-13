@@ -37,6 +37,18 @@ class LauncherStateUtilsTest {
     }
 
     @Test
+    fun filterApps_matches_by_tag() {
+        val apps = listOf(
+            LaunchableApp(label = "Firefox", packageName = "org.mozilla.firefox", tags = listOf("internet", "trabajo")),
+            LaunchableApp(label = "Signal", packageName = "org.signal", tags = listOf("mensajes")),
+        )
+
+        val result = filterApps(apps, "trabajo")
+
+        assertEquals(listOf("Firefox"), result.map { it.label })
+    }
+
+    @Test
     fun filterApps_returns_all_when_query_blank() {
         val apps = listOf(
             LaunchableApp(label = "Mail", packageName = "org.example.mail"),

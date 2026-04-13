@@ -76,6 +76,7 @@ class LauncherStateStoreTest {
             appsRepository = appsDataSource,
             favoritesStore = FavoritesStore(createTestPreferencesDataStore("state-favorites")),
             hiddenAppsStore = HiddenAppsStore(createTestPreferencesDataStore("state-hidden")),
+            appTagsStore = AppTagsStore(createTestPreferencesDataStore("state-tags")),
         )
     }
 }

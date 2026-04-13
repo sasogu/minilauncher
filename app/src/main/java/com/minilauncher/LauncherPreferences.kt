@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.io.IOException
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 private const val LEGACY_SHARED_PREFS = "launcher_prefs"
 private const val DATASTORE_NAME = "launcher_preferences"
@@ -30,6 +33,7 @@ object LauncherPreferenceKeys {
     val languageTag = stringPreferencesKey("language_tag")
     val favoritePackagesOrder = stringPreferencesKey("favorite_packages_order")
     val hiddenPackages = stringPreferencesKey("hidden_packages")
+    val appTags = stringPreferencesKey("app_tags")
     val homeReorderHintDismissed = booleanPreferencesKey("home_reorder_hint_dismissed")
     val themeMode = stringPreferencesKey("theme_mode")
     val usagePromptEnabled = booleanPreferencesKey("usage_prompt_enabled")
@@ -124,6 +128,76 @@ class HiddenAppsStore(
 
     private companion object {
         const val HIDDEN_SEPARATOR = "|"
+    }
+}
+
+class AppTagsStore(
+    private val dataStore: DataStore<Preferences>,
+) {
+    suspend fun loadAllTags(): Map<String, List<String>> {
+        val raw = dataStore.safeData()
+            .map { preferences -> preferences[LauncherPreferenceKeys.appTags] }
+            .first()
+            .orEmpty()
+        if (raw.isBlank()) return emptyMap()
+
+        return raw.lineSequence()
+            .mapNotNull { line ->
+                val packageAndTags = line.split(PACKAGE_TAGS_SEPARATOR, limit = 2)
+                if (packageAndTags.size != 2) return@mapNotNull null
+
+                val packageName = decode(packageAndTags[0]).trim()
+                if (packageName.isBlank()) return@mapNotNull null
+
+                val tags = packageAndTags[1]
+                    .split(TAG_SEPARATOR)
+                    .mapNotNull { decode(it).trim().takeIf(String::isNotBlank) }
+                    .distinctBy { normalize(it) }
+
+                packageName to tags
+            }
+            .filter { (_, tags) -> tags.isNotEmpty() }
+            .toMap()
+    }
+
+    suspend fun saveTags(packageName: String, tags: List<String>): Map<String, List<String>> {
+        val current = loadAllTags().toMutableMap()
+        val cleanedTags = cleanTags(tags)
+        if (cleanedTags.isEmpty()) {
+            current.remove(packageName)
+        } else {
+            current[packageName] = cleanedTags
+        }
+        dataStore.writeString(LauncherPreferenceKeys.appTags, serialize(current))
+        return current.toMap()
+    }
+
+    companion object {
+        fun cleanTags(tags: List<String>): List<String> {
+            return tags
+                .map(String::trim)
+                .filter(String::isNotBlank)
+                .distinctBy { normalize(it) }
+        }
+
+        fun parseTagsInput(input: String): List<String> {
+            return cleanTags(input.split(',', '\n'))
+        }
+
+        private const val PACKAGE_TAGS_SEPARATOR = "\t"
+        private const val TAG_SEPARATOR = "|"
+
+        private fun serialize(values: Map<String, List<String>>): String {
+            return values.entries
+                .sortedBy { it.key }
+                .joinToString("\n") { (packageName, tags) ->
+                    "${encode(packageName)}$PACKAGE_TAGS_SEPARATOR${tags.joinToString(TAG_SEPARATOR) { encode(it) }}"
+                }
+        }
+
+        private fun encode(value: String): String = URLEncoder.encode(value, StandardCharsets.UTF_8)
+
+        private fun decode(value: String): String = URLDecoder.decode(value, StandardCharsets.UTF_8)
     }
 }
 

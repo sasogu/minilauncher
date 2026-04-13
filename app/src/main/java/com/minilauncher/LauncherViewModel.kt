@@ -27,6 +27,7 @@ sealed interface LauncherUiAction {
     data object DismissWebSearch : LauncherUiAction
     data class PendingLaunchChanged(val app: LaunchableApp?) : LauncherUiAction
     data class TimeoutNoticeChanged(val notice: TimeoutNotice?) : LauncherUiAction
+    data class SaveAppTags(val app: LaunchableApp, val tags: List<String>) : LauncherUiAction
     data class TransientMessageChanged(val message: String?) : LauncherUiAction
     data object RefreshApps : LauncherUiAction
 }
@@ -35,7 +36,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val appsRepository = AppsRepository(application.packageManager)
     private val favoritesStore = FavoritesStore(application.launcherDataStore)
     private val hiddenAppsStore = HiddenAppsStore(application.launcherDataStore)
-    private val launcherStateStore = LauncherStateStore(appsRepository, favoritesStore, hiddenAppsStore)
+    private val appTagsStore = AppTagsStore(application.launcherDataStore)
+    private val launcherStateStore = LauncherStateStore(appsRepository, favoritesStore, hiddenAppsStore, appTagsStore)
     private val languageStore = LanguageStore(application.launcherDataStore)
     private val themeStore = ThemeStore(application.launcherDataStore)
     private val usagePromptStore = UsagePromptStore(application.launcherDataStore)
@@ -156,6 +158,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
             is LauncherUiAction.TimeoutNoticeChanged -> {
                 _uiState.value = _uiState.value.copy(timeoutNotice = action.notice)
+            }
+
+            is LauncherUiAction.SaveAppTags -> {
+                viewModelScope.launch {
+                    _uiState.value = launcherStateStore.saveTags(_uiState.value, action.app, action.tags)
+                }
             }
 
             is LauncherUiAction.TransientMessageChanged -> {

@@ -54,6 +54,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Visibility
@@ -90,6 +91,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -177,6 +179,7 @@ class MainActivity : ComponentActivity() {
                     onClockClick = ::openAlarms,
                     onToggleFavorite = ::toggleFavorite,
                     onHideApp = ::hideApp,
+                    onSaveAppTags = ::saveAppTags,
                     onUndoHideApp = ::restoreHiddenApp,
                     onHiddenAppNoticeConsumed = ::onHiddenAppNoticeConsumed,
                     onPromoteFavorite = ::promoteFavorite,
@@ -326,6 +329,10 @@ class MainActivity : ComponentActivity() {
 
     private fun hideApp(app: LaunchableApp) {
         launcherViewModel.dispatch(LauncherUiAction.HideApp(app))
+    }
+
+    private fun saveAppTags(app: LaunchableApp, tags: List<String>) {
+        launcherViewModel.dispatch(LauncherUiAction.SaveAppTags(app, tags))
     }
 
     private fun restoreHiddenApp(app: LaunchableApp) {
@@ -515,6 +522,7 @@ private fun LauncherApp(
     onClockClick: () -> Unit,
     onToggleFavorite: (LaunchableApp) -> Unit,
     onHideApp: (LaunchableApp) -> Unit,
+    onSaveAppTags: (LaunchableApp, List<String>) -> Unit,
     onUndoHideApp: (LaunchableApp) -> Unit,
     onHiddenAppNoticeConsumed: () -> Unit,
     onPromoteFavorite: (LaunchableApp) -> Unit,
@@ -541,6 +549,7 @@ private fun LauncherApp(
     val pagerState = rememberPagerState(initialPage = 0) { 3 }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    var appTagEditor by remember { mutableStateOf<LaunchableApp?>(null) }
     val visibleApps = remember(state.allApps, state.hiddenPackages) {
         if (state.hiddenPackages.isEmpty()) {
             state.allApps
@@ -593,6 +602,7 @@ private fun LauncherApp(
                         onAppClick = onAppClick,
                         onToggleFavorite = onToggleFavorite,
                         onHideApp = onHideApp,
+                        onEditTags = { appTagEditor = it },
                         onOpenAppInfo = onOpenAppInfo,
                         onOpenSettings = { scope.launch { pagerState.animateScrollToPage(2) } },
                     )
@@ -642,6 +652,17 @@ private fun LauncherApp(
                 WebSearchDialog(
                     onSearch = onWebSearch,
                     onDismiss = onWebSearchDismiss,
+                )
+            }
+
+            appTagEditor?.let { app ->
+                AppTagsDialog(
+                    app = app,
+                    onDismiss = { appTagEditor = null },
+                    onSave = { tags ->
+                        onSaveAppTags(app, tags)
+                        appTagEditor = null
+                    },
                 )
             }
 
@@ -763,6 +784,7 @@ private fun AppsScreen(
     onAppClick: (LaunchableApp) -> Unit,
     onToggleFavorite: (LaunchableApp) -> Unit,
     onHideApp: (LaunchableApp) -> Unit,
+    onEditTags: (LaunchableApp) -> Unit,
     onOpenAppInfo: (LaunchableApp) -> Unit,
     onOpenSettings: () -> Unit,
 ) {
@@ -806,6 +828,7 @@ private fun AppsScreen(
                     onOpenAppInfo = { onOpenAppInfo(app) },
                     onToggleFavorite = { onToggleFavorite(app) },
                     onHideApp = { onHideApp(app) },
+                    onEditTags = { onEditTags(app) },
                 )
             }
         }
@@ -1437,6 +1460,7 @@ private fun AppRow(
     onOpenAppInfo: () -> Unit,
     onToggleFavorite: () -> Unit,
     onHideApp: () -> Unit,
+    onEditTags: () -> Unit,
 ) {
     val palette = launcherPalette()
     val haptic = LocalHapticFeedback.current
@@ -1465,6 +1489,13 @@ private fun AppRow(
                     Icon(
                         imageVector = Icons.Outlined.Info,
                         contentDescription = stringResource(R.string.app_actions_app_info),
+                        tint = palette.iconMuted,
+                    )
+                }
+                IconButton(onClick = onEditTags) {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = stringResource(R.string.app_action_edit_tags),
                         tint = palette.iconMuted,
                     )
                 }
@@ -1561,12 +1592,58 @@ private fun AppNameRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (app.tags.isNotEmpty()) {
+                    Text(
+                        text = app.tags.joinToString("  ") { tag -> "#$tag" },
+                        color = palette.textSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
         if (trailing != null) {
             trailing()
         }
     }
+}
+
+@Composable
+private fun AppTagsDialog(
+    app: LaunchableApp,
+    onDismiss: () -> Unit,
+    onSave: (List<String>) -> Unit,
+) {
+    var text by rememberSaveable(app.packageName) { mutableStateOf(app.tags.joinToString(", ")) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.tag_editor_title, app.label)) },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = {
+                    Text(stringResource(R.string.tag_editor_hint))
+                },
+                supportingText = {
+                    Text(stringResource(R.string.tag_editor_support))
+                },
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(AppTagsStore.parseTagsInput(text)) }) {
+                Text(stringResource(R.string.tag_editor_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
 }
 
 @Composable

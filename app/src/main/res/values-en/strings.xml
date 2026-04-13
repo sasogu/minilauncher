@@ -15,6 +15,7 @@
     <string name="app_actions_app_info">Open app info</string>
     <string name="app_actions_uninstall">Uninstall</string>
     <string name="app_action_toggle_favorite">Toggle favorite</string>
+    <string name="app_action_edit_tags">Edit tags</string>
     <string name="app_action_hide_app">Hide app</string>
     <string name="shortcut_phone">Phone</string>
     <string name="shortcut_web_search">Web search</string>
@@ -50,6 +51,10 @@
     <string name="hidden_app_snackbar_undo">Undo</string>
     <string name="web_search_hint">Search the web...</string>
     <string name="web_search_button">Search</string>
+    <string name="tag_editor_title">Tags for %1$s</string>
+    <string name="tag_editor_hint">Example: work, reading, maps</string>
+    <string name="tag_editor_support">Separate tags with commas or line breaks.</string>
+    <string name="tag_editor_save">Save</string>
     <string name="error_no_browser">No browser is available on this device.</string>
     <string name="error_no_app_info">Could not open the app info screen.</string>
     <string name="error_no_clock_app">No clock app is available.</string>

@@ -47,6 +47,7 @@ data class TimeoutNotice(
 data class LaunchableApp(
     val label: String,
     val packageName: String,
+    val tags: List<String> = emptyList(),
 )
 
 interface LaunchableAppsDataSource {
@@ -61,6 +62,7 @@ class LauncherStateStore(
     private val appsRepository: LaunchableAppsDataSource,
     private val favoritesStore: FavoritesStore,
     private val hiddenAppsStore: HiddenAppsStore,
+    private val appTagsStore: AppTagsStore,
 ) {
     fun onQueryChange(state: LauncherUiState, query: String): LauncherUiState {
         val visibleApps = visibleApps(state.allApps, state.hiddenPackages)
@@ -97,6 +99,11 @@ class LauncherStateStore(
         return state.afterHiddenPackagesUpdated(hiddenPackages)
     }
 
+    suspend fun saveTags(state: LauncherUiState, app: LaunchableApp, tags: List<String>): LauncherUiState {
+        val savedTags = appTagsStore.saveTags(app.packageName, tags)[app.packageName].orEmpty()
+        return state.withUpdatedApp(app.packageName) { existing -> existing.copy(tags = savedTags) }
+    }
+
     fun clearLastHiddenApp(state: LauncherUiState): LauncherUiState {
         if (state.lastHiddenApp == null) return state
         return state.copy(lastHiddenApp = null)
@@ -108,8 +115,10 @@ class LauncherStateStore(
         val apps = appsRepository.loadLaunchableApps()
         val favorites = favoritesStore.loadFavorites()
         val hiddenPackages = hiddenAppsStore.loadHiddenPackages()
+        val appTags = appTagsStore.loadAllTags()
+        val taggedApps = apps.map { app -> app.copy(tags = appTags[app.packageName].orEmpty()) }
 
-        apps.chunked(32)
+        taggedApps.chunked(32)
             .runningFold(emptyList<LaunchableApp>()) { acc, chunk -> acc + chunk }
             .drop(1)
             .forEach { partialApps ->
@@ -126,13 +135,13 @@ class LauncherStateStore(
             }
 
         val stateNow = stateFlow.value
-        val visibleApps = visibleApps(apps, hiddenPackages)
+        val visibleApps = visibleApps(taggedApps, hiddenPackages)
         stateFlow.value = stateNow.copy(
-            allApps = apps,
+            allApps = taggedApps,
             filteredApps = filterApps(visibleApps, stateNow.query),
             favoritePackages = favorites,
             hiddenPackages = hiddenPackages,
-            hiddenApps = hiddenApps(apps, hiddenPackages),
+            hiddenApps = hiddenApps(taggedApps, hiddenPackages),
         )
     }
 
@@ -163,6 +172,27 @@ class LauncherStateStore(
             hiddenApps = hiddenApps(allApps, hiddenPackages),
             filteredApps = filterApps(visibleApps, query),
             lastHiddenApp = null,
+        )
+    }
+
+    private fun LauncherUiState.withUpdatedApp(
+        packageName: String,
+        transform: (LaunchableApp) -> LaunchableApp,
+    ): LauncherUiState {
+        val updatedAllApps = allApps.map { app ->
+            if (app.packageName == packageName) transform(app) else app
+        }
+        val updatedVisibleApps = visibleApps(updatedAllApps, hiddenPackages)
+        return copy(
+            allApps = updatedAllApps,
+            filteredApps = filterApps(updatedVisibleApps, query),
+            hiddenApps = hiddenApps(updatedAllApps, hiddenPackages),
+            pendingLaunchApp = pendingLaunchApp?.let { app ->
+                if (app.packageName == packageName) transform(app) else app
+            },
+            lastHiddenApp = lastHiddenApp?.let { app ->
+                if (app.packageName == packageName) transform(app) else app
+            },
         )
     }
 }
@@ -276,7 +306,8 @@ fun filterApps(
     val normalizedQuery = normalize(query)
     return apps.filter { app ->
         normalize(app.label).contains(normalizedQuery) ||
-            app.packageName.lowercase(Locale.ROOT).contains(normalizedQuery)
+            app.packageName.lowercase(Locale.ROOT).contains(normalizedQuery) ||
+            app.tags.any { tag -> normalize(tag).contains(normalizedQuery) }
     }
 }
 
