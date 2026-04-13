@@ -37,6 +37,9 @@
     <string name="settings_language_subtitle">Selecciona el idioma de la interfaz.</string>
     <string name="settings_theme_title">Apariencia</string>
     <string name="settings_theme_subtitle">Elige entre modo oscuro y modo claro.</string>
+    <string name="settings_home_title">Inicio</string>
+    <string name="settings_home_subtitle">Personaliza la informacion visible en la cabecera principal.</string>
+    <string name="settings_moon_percentage_label">Mostrar porcentaje de iluminacion lunar</string>
     <string name="theme_dark">Oscuro</string>
     <string name="theme_light">Claro</string>
     <string name="settings_usage_title">Uso y recordatorios</string>

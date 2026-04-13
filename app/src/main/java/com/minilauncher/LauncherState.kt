@@ -31,6 +31,7 @@ data class LauncherUiState(
     val selectedLanguage: AppLanguage = AppLanguage.SPANISH,
     val selectedThemeMode: ThemeMode = ThemeMode.DARK,
     val usagePromptEnabled: Boolean = false,
+    val showMoonIlluminationPercentage: Boolean = true,
     val showHomeReorderHint: Boolean = true,
     val showWebSearch: Boolean = false,
     val firstLoadDurationMs: Long? = null,

@@ -20,6 +20,7 @@ object BackupManager {
             put("appTags", dataStore.readString(LauncherPreferenceKeys.appTags, ""))
             put("themeMode", dataStore.readString(LauncherPreferenceKeys.themeMode, ThemeMode.DARK.storageValue))
             put("usagePromptEnabled", dataStore.readBoolean(LauncherPreferenceKeys.usagePromptEnabled, false))
+            put("moonIlluminationPercentageVisible", dataStore.readBoolean(LauncherPreferenceKeys.moonIlluminationPercentageVisible, true))
             put("homeReorderHintDismissed", dataStore.readBoolean(LauncherPreferenceKeys.homeReorderHintDismissed, false))
         }
 
@@ -46,6 +47,7 @@ object BackupManager {
             setOrRemove(preferences, LauncherPreferenceKeys.appTags, backupJson.optString("appTags", ""))
             setOrRemove(preferences, LauncherPreferenceKeys.themeMode, backupJson.optString("themeMode", ThemeMode.DARK.storageValue))
             preferences[LauncherPreferenceKeys.usagePromptEnabled] = backupJson.optBoolean("usagePromptEnabled", false)
+            preferences[LauncherPreferenceKeys.moonIlluminationPercentageVisible] = backupJson.optBoolean("moonIlluminationPercentageVisible", true)
             preferences[LauncherPreferenceKeys.homeReorderHintDismissed] = backupJson.optBoolean("homeReorderHintDismissed", false)
         }
     }

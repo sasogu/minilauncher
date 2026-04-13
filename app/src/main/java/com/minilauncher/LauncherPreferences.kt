@@ -37,6 +37,7 @@ object LauncherPreferenceKeys {
     val homeReorderHintDismissed = booleanPreferencesKey("home_reorder_hint_dismissed")
     val themeMode = stringPreferencesKey("theme_mode")
     val usagePromptEnabled = booleanPreferencesKey("usage_prompt_enabled")
+    val moonIlluminationPercentageVisible = booleanPreferencesKey("moon_illumination_percentage_visible")
 }
 
 fun DataStore<Preferences>.safeData(): Flow<Preferences> {
@@ -84,6 +85,20 @@ class UsagePromptStore(
 
     suspend fun save(enabled: Boolean) {
         dataStore.writeBoolean(LauncherPreferenceKeys.usagePromptEnabled, enabled)
+    }
+}
+
+class MoonIlluminationStore(
+    private val dataStore: DataStore<Preferences>,
+) {
+    suspend fun load(): Boolean {
+        return dataStore.readBoolean(LauncherPreferenceKeys.moonIlluminationPercentageVisible, true)
+    }
+
+    fun loadBlocking(): Boolean = runBlocking { load() }
+
+    suspend fun save(visible: Boolean) {
+        dataStore.writeBoolean(LauncherPreferenceKeys.moonIlluminationPercentageVisible, visible)
     }
 }
 

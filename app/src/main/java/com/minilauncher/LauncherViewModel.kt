@@ -22,6 +22,7 @@ sealed interface LauncherUiAction {
     data class LanguageChanged(val language: AppLanguage) : LauncherUiAction
     data class ThemeChanged(val themeMode: ThemeMode) : LauncherUiAction
     data class UsagePromptToggled(val enabled: Boolean) : LauncherUiAction
+    data class MoonIlluminationPercentageToggled(val visible: Boolean) : LauncherUiAction
     data object DismissHomeReorderHint : LauncherUiAction
     data object OpenWebSearch : LauncherUiAction
     data object DismissWebSearch : LauncherUiAction
@@ -42,6 +43,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val languageStore = LanguageStore(application.launcherDataStore)
     private val themeStore = ThemeStore(application.launcherDataStore)
     private val usagePromptStore = UsagePromptStore(application.launcherDataStore)
+    private val moonIlluminationStore = MoonIlluminationStore(application.launcherDataStore)
     private val homeHintsStore = HomeHintsStore(application.launcherDataStore)
     private var hasCompletedInitialAppsLoad = false
 
@@ -126,6 +128,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
             }
 
+            is LauncherUiAction.MoonIlluminationPercentageToggled -> {
+                viewModelScope.launch {
+                    moonIlluminationStore.save(action.visible)
+                    _uiState.value = _uiState.value.copy(showMoonIlluminationPercentage = action.visible)
+                }
+            }
+
             LauncherUiAction.DismissHomeReorderHint -> {
                 if (!_uiState.value.showHomeReorderHint) return
                 viewModelScope.launch {
@@ -203,11 +212,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val language = languageStore.loadLanguage()
             val themeMode = themeStore.loadThemeMode()
             val usagePromptEnabled = usagePromptStore.load()
+            val showMoonIlluminationPercentage = moonIlluminationStore.load()
             val showHomeReorderHint = homeHintsStore.isHomeReorderHintVisible()
             _uiState.value = _uiState.value.copy(
                 selectedLanguage = language,
                 selectedThemeMode = themeMode,
                 usagePromptEnabled = usagePromptEnabled,
+                showMoonIlluminationPercentage = showMoonIlluminationPercentage,
                 showHomeReorderHint = showHomeReorderHint,
             )
         }

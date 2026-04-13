@@ -126,29 +126,32 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Calendar
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.PI
+import kotlin.math.cos
 import androidx.annotation.StringRes
 
 /**
- * Devuelve el emoji de la fase lunar para una fecha dada.
- * Algoritmo local sin red: usa luna nueva de referencia (6 ene 2000) y período sinódico.
+ * Devuelve una representacion compacta de la iluminacion lunar para una fecha dada.
+ * Algoritmo local sin red: usa luna nueva de referencia (6 ene 2000) y periodo sinodico.
+ * Se usa un icono neutro para evitar diferencias visuales entre sets de emoji.
  */
-private fun lunarPhaseEmoji(date: Date = Date()): String {
+private fun lunarPhaseText(
+    date: Date = Date(),
+    showPercentage: Boolean,
+): String {
     val knownNewMoonMs = 947_182_440_000L // 6 ene 2000 18:14 UTC en milisegundos
     val synodicMs = 29.53059 * 24 * 60 * 60 * 1000
     val elapsed = (date.time - knownNewMoonMs).toDouble()
     val phase = ((elapsed % synodicMs) / synodicMs + 1.0) % 1.0
-    return when ((phase * 8).toInt()) {
-        0 -> "\uD83C\uDF11" // 🌑 Luna nueva
-        1 -> "\uD83C\uDF12" // 🌒 Creciente menguante
-        2 -> "\uD83C\uDF13" // 🌓 Cuarto creciente
-        3 -> "\uD83C\uDF14" // 🌔 Gibosa creciente
-        4 -> "\uD83C\uDF15" // 🌕 Luna llena
-        5 -> "\uD83C\uDF16" // 🌖 Gibosa menguante
-        6 -> "\uD83C\uDF17" // 🌗 Cuarto menguante
-        else -> "\uD83C\uDF18" // 🌘 Creciente menguante
+    val illumination = ((1 - cos(2 * PI * phase)) / 2.0 * 100).toInt()
+    return if (showPercentage) {
+        "\uD83C\uDF19 $illumination%"
+    } else {
+        "\uD83C\uDF19"
     }
 }
 
@@ -228,6 +231,7 @@ class MainActivity : ComponentActivity() {
                     onExportBackup = ::exportBackup,
                     onImportBackup = ::importBackup,
                     onUsagePromptToggle = ::onUsagePromptToggle,
+                    onMoonIlluminationPercentageToggle = ::onMoonIlluminationPercentageToggle,
                     onRestoreHiddenApp = ::restoreHiddenApp,
                     onRestoreAllHiddenApps = ::restoreAllHiddenApps,
                     onOpenWebSearch = ::onOpenWebSearch,
@@ -323,6 +327,10 @@ class MainActivity : ComponentActivity() {
 
     private fun onUsagePromptToggle(enabled: Boolean) {
         launcherViewModel.dispatch(LauncherUiAction.UsagePromptToggled(enabled))
+    }
+
+    private fun onMoonIlluminationPercentageToggle(visible: Boolean) {
+        launcherViewModel.dispatch(LauncherUiAction.MoonIlluminationPercentageToggled(visible))
     }
 
     private fun exportBackup() {
@@ -585,6 +593,7 @@ private fun LauncherApp(
     onExportBackup: () -> Unit = {},
     onImportBackup: () -> Unit = {},
     onUsagePromptToggle: (Boolean) -> Unit = {},
+    onMoonIlluminationPercentageToggle: (Boolean) -> Unit = {},
     onRestoreHiddenApp: (LaunchableApp) -> Unit = {},
     onRestoreAllHiddenApps: () -> Unit = {},
     onOpenWebSearch: () -> Unit = {},
@@ -630,6 +639,7 @@ private fun LauncherApp(
                 when (page) {
                     0 -> HomeScreen(
                         homeApps = homeApps,
+                        showMoonIlluminationPercentage = state.showMoonIlluminationPercentage,
                         isSearching = state.homeQuery.isNotBlank(),
                         showFavoritesReorderHint = state.showHomeReorderHint,
                         homeQuery = state.homeQuery,
@@ -659,12 +669,14 @@ private fun LauncherApp(
                         selectedLanguage = state.selectedLanguage,
                         selectedThemeMode = state.selectedThemeMode,
                         usagePromptEnabled = state.usagePromptEnabled,
+                        showMoonIlluminationPercentage = state.showMoonIlluminationPercentage,
                         onLanguageChange = onLanguageChange,
                         onThemeChange = onThemeChange,
                         onClearReminder = onClearReminder,
                         onExportBackup = onExportBackup,
                         onImportBackup = onImportBackup,
                         onUsagePromptToggle = onUsagePromptToggle,
+                        onMoonIlluminationPercentageToggle = onMoonIlluminationPercentageToggle,
                         hiddenApps = state.hiddenApps,
                         onRestoreHiddenApp = onRestoreHiddenApp,
                         onRestoreAllHiddenApps = onRestoreAllHiddenApps,
@@ -748,6 +760,7 @@ private fun LauncherApp(
 @Composable
 private fun HomeScreen(
     homeApps: List<LaunchableApp>,
+    showMoonIlluminationPercentage: Boolean,
     isSearching: Boolean,
     showFavoritesReorderHint: Boolean,
     homeQuery: String,
@@ -773,7 +786,10 @@ private fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             item {
-                ClockHeader(onClick = onClockClick)
+                ClockHeader(
+                    onClick = onClockClick,
+                    showPercentage = showMoonIlluminationPercentage,
+                )
             }
             item {
                 SearchBox(
@@ -926,7 +942,10 @@ private fun HomeFavoritesHintCard(
 }
 
 @Composable
-private fun ClockHeader(onClick: () -> Unit) {
+private fun ClockHeader(
+    onClick: () -> Unit,
+    showPercentage: Boolean,
+) {
     val palette = launcherPalette()
     var now by remember { mutableStateOf(Date()) }
     val batteryLevel by rememberBatteryLevel()
@@ -947,6 +966,14 @@ private fun ClockHeader(onClick: () -> Unit) {
     }
     val dateText = remember(now) {
         SimpleDateFormat("EEEE\nd MMMM", locale).format(now)
+    }
+    val lunarPhaseDayKey = remember(now) {
+        Calendar.getInstance().apply { time = now }.run {
+            get(Calendar.YEAR) to get(Calendar.DAY_OF_YEAR)
+        }
+    }
+    val lunarPhase = remember(lunarPhaseDayKey, showPercentage) {
+        lunarPhaseText(now, showPercentage)
     }
 
     Column(
@@ -1006,7 +1033,8 @@ private fun ClockHeader(onClick: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = lunarPhaseEmoji(now),
+                    text = lunarPhase,
+                    color = palette.textPrimary,
                     fontSize = 20.sp,
                 )
             }
@@ -1127,6 +1155,7 @@ private fun SettingsScreen(
     selectedLanguage: AppLanguage,
     selectedThemeMode: ThemeMode,
     usagePromptEnabled: Boolean,
+    showMoonIlluminationPercentage: Boolean,
     hiddenApps: List<LaunchableApp>,
     onLanguageChange: (AppLanguage) -> Unit,
     onThemeChange: (ThemeMode) -> Unit,
@@ -1134,6 +1163,7 @@ private fun SettingsScreen(
     onExportBackup: () -> Unit,
     onImportBackup: () -> Unit,
     onUsagePromptToggle: (Boolean) -> Unit,
+    onMoonIlluminationPercentageToggle: (Boolean) -> Unit,
     onRestoreHiddenApp: (LaunchableApp) -> Unit,
     onRestoreAllHiddenApps: () -> Unit,
     onBackToApps: () -> Unit,
@@ -1230,6 +1260,32 @@ private fun SettingsScreen(
                             )
                         }
                     }
+                }
+            }
+        }
+
+        item {
+            SettingsCard(title = stringResource(R.string.settings_home_title)) {
+                Text(
+                    text = stringResource(R.string.settings_home_subtitle),
+                    color = palette.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_moon_percentage_label),
+                        color = palette.textPrimary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = showMoonIlluminationPercentage,
+                        onCheckedChange = onMoonIlluminationPercentageToggle,
+                    )
                 }
             }
         }

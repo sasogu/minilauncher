@@ -37,6 +37,9 @@
     <string name="settings_language_subtitle">Select the interface language.</string>
     <string name="settings_theme_title">Appearance</string>
     <string name="settings_theme_subtitle">Choose between dark mode and light mode.</string>
+    <string name="settings_home_title">Home</string>
+    <string name="settings_home_subtitle">Customize what is shown in the main header.</string>
+    <string name="settings_moon_percentage_label">Show moon illumination percentage</string>
     <string name="theme_dark">Dark</string>
     <string name="theme_light">Light</string>
     <string name="settings_usage_title">Usage and reminders</string>
