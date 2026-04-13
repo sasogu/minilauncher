@@ -38,6 +38,9 @@ object LauncherPreferenceKeys {
     val themeMode = stringPreferencesKey("theme_mode")
     val usagePromptEnabled = booleanPreferencesKey("usage_prompt_enabled")
     val moonIlluminationPercentageVisible = booleanPreferencesKey("moon_illumination_percentage_visible")
+    val homeWeekdayVisible = booleanPreferencesKey("home_weekday_visible")
+    val homeDateVisible = booleanPreferencesKey("home_date_visible")
+    val homeUse24HourTime = booleanPreferencesKey("home_use_24_hour_time")
 }
 
 fun DataStore<Preferences>.safeData(): Flow<Preferences> {
@@ -99,6 +102,34 @@ class MoonIlluminationStore(
 
     suspend fun save(visible: Boolean) {
         dataStore.writeBoolean(LauncherPreferenceKeys.moonIlluminationPercentageVisible, visible)
+    }
+}
+
+class HomeHeaderDateStore(
+    private val dataStore: DataStore<Preferences>,
+) {
+    suspend fun loadShowWeekday(): Boolean {
+        return dataStore.readBoolean(LauncherPreferenceKeys.homeWeekdayVisible, true)
+    }
+
+    suspend fun loadShowDate(): Boolean {
+        return dataStore.readBoolean(LauncherPreferenceKeys.homeDateVisible, true)
+    }
+
+    suspend fun loadUse24HourTime(): Boolean {
+        return dataStore.readBoolean(LauncherPreferenceKeys.homeUse24HourTime, true)
+    }
+
+    suspend fun saveShowWeekday(visible: Boolean) {
+        dataStore.writeBoolean(LauncherPreferenceKeys.homeWeekdayVisible, visible)
+    }
+
+    suspend fun saveShowDate(visible: Boolean) {
+        dataStore.writeBoolean(LauncherPreferenceKeys.homeDateVisible, visible)
+    }
+
+    suspend fun saveUse24HourTime(enabled: Boolean) {
+        dataStore.writeBoolean(LauncherPreferenceKeys.homeUse24HourTime, enabled)
     }
 }
 

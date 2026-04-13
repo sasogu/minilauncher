@@ -23,6 +23,9 @@ sealed interface LauncherUiAction {
     data class ThemeChanged(val themeMode: ThemeMode) : LauncherUiAction
     data class UsagePromptToggled(val enabled: Boolean) : LauncherUiAction
     data class MoonIlluminationPercentageToggled(val visible: Boolean) : LauncherUiAction
+    data class HomeWeekdayToggled(val visible: Boolean) : LauncherUiAction
+    data class HomeDateToggled(val visible: Boolean) : LauncherUiAction
+    data class HomeUse24HourTimeToggled(val enabled: Boolean) : LauncherUiAction
     data object DismissHomeReorderHint : LauncherUiAction
     data object OpenWebSearch : LauncherUiAction
     data object DismissWebSearch : LauncherUiAction
@@ -44,6 +47,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val themeStore = ThemeStore(application.launcherDataStore)
     private val usagePromptStore = UsagePromptStore(application.launcherDataStore)
     private val moonIlluminationStore = MoonIlluminationStore(application.launcherDataStore)
+    private val homeHeaderDateStore = HomeHeaderDateStore(application.launcherDataStore)
     private val homeHintsStore = HomeHintsStore(application.launcherDataStore)
     private var hasCompletedInitialAppsLoad = false
 
@@ -135,6 +139,27 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 }
             }
 
+            is LauncherUiAction.HomeWeekdayToggled -> {
+                viewModelScope.launch {
+                    homeHeaderDateStore.saveShowWeekday(action.visible)
+                    _uiState.value = _uiState.value.copy(showHomeWeekday = action.visible)
+                }
+            }
+
+            is LauncherUiAction.HomeDateToggled -> {
+                viewModelScope.launch {
+                    homeHeaderDateStore.saveShowDate(action.visible)
+                    _uiState.value = _uiState.value.copy(showHomeDate = action.visible)
+                }
+            }
+
+            is LauncherUiAction.HomeUse24HourTimeToggled -> {
+                viewModelScope.launch {
+                    homeHeaderDateStore.saveUse24HourTime(action.enabled)
+                    _uiState.value = _uiState.value.copy(use24HourTime = action.enabled)
+                }
+            }
+
             LauncherUiAction.DismissHomeReorderHint -> {
                 if (!_uiState.value.showHomeReorderHint) return
                 viewModelScope.launch {
@@ -213,12 +238,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val themeMode = themeStore.loadThemeMode()
             val usagePromptEnabled = usagePromptStore.load()
             val showMoonIlluminationPercentage = moonIlluminationStore.load()
+            val showHomeWeekday = homeHeaderDateStore.loadShowWeekday()
+            val showHomeDate = homeHeaderDateStore.loadShowDate()
+            val use24HourTime = homeHeaderDateStore.loadUse24HourTime()
             val showHomeReorderHint = homeHintsStore.isHomeReorderHintVisible()
             _uiState.value = _uiState.value.copy(
                 selectedLanguage = language,
                 selectedThemeMode = themeMode,
                 usagePromptEnabled = usagePromptEnabled,
                 showMoonIlluminationPercentage = showMoonIlluminationPercentage,
+                showHomeWeekday = showHomeWeekday,
+                showHomeDate = showHomeDate,
+                use24HourTime = use24HourTime,
                 showHomeReorderHint = showHomeReorderHint,
             )
         }

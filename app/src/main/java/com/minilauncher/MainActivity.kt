@@ -245,6 +245,9 @@ class MainActivity : ComponentActivity() {
                     onImportBackup = ::importBackup,
                     onUsagePromptToggle = ::onUsagePromptToggle,
                     onMoonIlluminationPercentageToggle = ::onMoonIlluminationPercentageToggle,
+                    onHomeWeekdayToggle = ::onHomeWeekdayToggle,
+                    onHomeDateToggle = ::onHomeDateToggle,
+                    onUse24HourTimeToggle = ::onUse24HourTimeToggle,
                     onRestoreHiddenApp = ::restoreHiddenApp,
                     onRestoreAllHiddenApps = ::restoreAllHiddenApps,
                     onOpenWebSearch = ::onOpenWebSearch,
@@ -352,6 +355,18 @@ class MainActivity : ComponentActivity() {
 
     private fun onMoonIlluminationPercentageToggle(visible: Boolean) {
         launcherViewModel.dispatch(LauncherUiAction.MoonIlluminationPercentageToggled(visible))
+    }
+
+    private fun onHomeWeekdayToggle(visible: Boolean) {
+        launcherViewModel.dispatch(LauncherUiAction.HomeWeekdayToggled(visible))
+    }
+
+    private fun onHomeDateToggle(visible: Boolean) {
+        launcherViewModel.dispatch(LauncherUiAction.HomeDateToggled(visible))
+    }
+
+    private fun onUse24HourTimeToggle(enabled: Boolean) {
+        launcherViewModel.dispatch(LauncherUiAction.HomeUse24HourTimeToggled(enabled))
     }
 
     private fun exportBackup() {
@@ -616,6 +631,9 @@ private fun LauncherApp(
     onImportBackup: () -> Unit = {},
     onUsagePromptToggle: (Boolean) -> Unit = {},
     onMoonIlluminationPercentageToggle: (Boolean) -> Unit = {},
+    onHomeWeekdayToggle: (Boolean) -> Unit = {},
+    onHomeDateToggle: (Boolean) -> Unit = {},
+    onUse24HourTimeToggle: (Boolean) -> Unit = {},
     onRestoreHiddenApp: (LaunchableApp) -> Unit = {},
     onRestoreAllHiddenApps: () -> Unit = {},
     onOpenWebSearch: () -> Unit = {},
@@ -668,6 +686,9 @@ private fun LauncherApp(
                     0 -> HomeScreen(
                         homeApps = homeApps,
                         showMoonIlluminationPercentage = state.showMoonIlluminationPercentage,
+                        showWeekday = state.showHomeWeekday,
+                        showDate = state.showHomeDate,
+                        use24HourTime = state.use24HourTime,
                         isSearching = state.homeQuery.isNotBlank(),
                         showFavoritesReorderHint = state.showHomeReorderHint,
                         homeQuery = state.homeQuery,
@@ -698,6 +719,9 @@ private fun LauncherApp(
                         selectedThemeMode = state.selectedThemeMode,
                         usagePromptEnabled = state.usagePromptEnabled,
                         showMoonIlluminationPercentage = state.showMoonIlluminationPercentage,
+                        showWeekday = state.showHomeWeekday,
+                        showDate = state.showHomeDate,
+                        use24HourTime = state.use24HourTime,
                         onLanguageChange = onLanguageChange,
                         onThemeChange = onThemeChange,
                         onClearReminder = onClearReminder,
@@ -705,6 +729,9 @@ private fun LauncherApp(
                         onImportBackup = onImportBackup,
                         onUsagePromptToggle = onUsagePromptToggle,
                         onMoonIlluminationPercentageToggle = onMoonIlluminationPercentageToggle,
+                        onWeekdayToggle = onHomeWeekdayToggle,
+                        onDateToggle = onHomeDateToggle,
+                        onUse24HourTimeToggle = onUse24HourTimeToggle,
                         hiddenApps = state.hiddenApps,
                         onRestoreHiddenApp = onRestoreHiddenApp,
                         onRestoreAllHiddenApps = onRestoreAllHiddenApps,
@@ -789,6 +816,9 @@ private fun LauncherApp(
 private fun HomeScreen(
     homeApps: List<LaunchableApp>,
     showMoonIlluminationPercentage: Boolean,
+    showWeekday: Boolean,
+    showDate: Boolean,
+    use24HourTime: Boolean,
     isSearching: Boolean,
     showFavoritesReorderHint: Boolean,
     homeQuery: String,
@@ -817,6 +847,9 @@ private fun HomeScreen(
                 ClockHeader(
                     onClick = onClockClick,
                     showPercentage = showMoonIlluminationPercentage,
+                    showWeekday = showWeekday,
+                    showDate = showDate,
+                    use24HourTime = use24HourTime,
                 )
             }
             item {
@@ -973,6 +1006,9 @@ private fun HomeFavoritesHintCard(
 private fun ClockHeader(
     onClick: () -> Unit,
     showPercentage: Boolean,
+    showWeekday: Boolean,
+    showDate: Boolean,
+    use24HourTime: Boolean,
 ) {
     val palette = launcherPalette()
     var now by remember { mutableStateOf(Date()) }
@@ -990,10 +1026,13 @@ private fun ClockHeader(
     }
 
     val timeText = remember(now) {
-        SimpleDateFormat("HH:mm", locale).format(now)
+        SimpleDateFormat(if (use24HourTime) "HH:mm" else "h:mm a", locale).format(now)
+    }
+    val weekdayText = remember(now) {
+        SimpleDateFormat("EEEE", locale).format(now)
     }
     val dateText = remember(now) {
-        SimpleDateFormat("EEEE\nd MMMM", locale).format(now)
+        SimpleDateFormat("d MMMM", locale).format(now)
     }
     val lunarPhaseDayKey = remember(now) {
         Calendar.getInstance().apply { time = now }.run {
@@ -1052,13 +1091,27 @@ private fun ClockHeader(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = dateText.replaceFirstChar { it.titlecase(locale) },
-                    color = palette.textSecondary,
-                    fontSize = 16.sp,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 18.sp,
-                )
+                if (showWeekday) {
+                    Text(
+                        text = weekdayText.replaceFirstChar { it.titlecase(locale) },
+                        color = palette.textSecondary,
+                        fontSize = 16.sp,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 18.sp,
+                    )
+                }
+                if (showWeekday && showDate) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                }
+                if (showDate) {
+                    Text(
+                        text = dateText,
+                        color = palette.textSecondary,
+                        fontSize = 16.sp,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 18.sp,
+                    )
+                }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = lunarPhase,
@@ -1184,6 +1237,9 @@ private fun SettingsScreen(
     selectedThemeMode: ThemeMode,
     usagePromptEnabled: Boolean,
     showMoonIlluminationPercentage: Boolean,
+    showWeekday: Boolean,
+    showDate: Boolean,
+    use24HourTime: Boolean,
     hiddenApps: List<LaunchableApp>,
     onLanguageChange: (AppLanguage) -> Unit,
     onThemeChange: (ThemeMode) -> Unit,
@@ -1192,6 +1248,9 @@ private fun SettingsScreen(
     onImportBackup: () -> Unit,
     onUsagePromptToggle: (Boolean) -> Unit,
     onMoonIlluminationPercentageToggle: (Boolean) -> Unit,
+    onWeekdayToggle: (Boolean) -> Unit,
+    onDateToggle: (Boolean) -> Unit,
+    onUse24HourTimeToggle: (Boolean) -> Unit,
     onRestoreHiddenApp: (LaunchableApp) -> Unit,
     onRestoreAllHiddenApps: () -> Unit,
     onBackToApps: () -> Unit,
@@ -1313,6 +1372,57 @@ private fun SettingsScreen(
                     Switch(
                         checked = showMoonIlluminationPercentage,
                         onCheckedChange = onMoonIlluminationPercentageToggle,
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_home_weekday_label),
+                        color = palette.textPrimary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = showWeekday,
+                        onCheckedChange = onWeekdayToggle,
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_home_date_label),
+                        color = palette.textPrimary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = showDate,
+                        onCheckedChange = onDateToggle,
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_home_24h_label),
+                        color = palette.textPrimary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = use24HourTime,
+                        onCheckedChange = onUse24HourTimeToggle,
                     )
                 }
             }

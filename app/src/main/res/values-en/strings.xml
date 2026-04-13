@@ -40,6 +40,9 @@
     <string name="settings_home_title">Home</string>
     <string name="settings_home_subtitle">Customize what is shown in the main header.</string>
     <string name="settings_moon_percentage_label">Show moon illumination percentage</string>
+    <string name="settings_home_weekday_label">Show weekday</string>
+    <string name="settings_home_date_label">Show date</string>
+    <string name="settings_home_24h_label">Use 24-hour format</string>
     <string name="theme_dark">Dark</string>
     <string name="theme_light">Light</string>
     <string name="settings_usage_title">Usage and reminders</string>

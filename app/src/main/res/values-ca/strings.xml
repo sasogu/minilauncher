@@ -40,6 +40,9 @@
     <string name="settings_home_title">Inici</string>
     <string name="settings_home_subtitle">Personalitza la informació visible en la capçalera principal.</string>
     <string name="settings_moon_percentage_label">Mostrar percentatge d\'il·luminació lunar</string>
+    <string name="settings_home_weekday_label">Mostrar dia de la setmana</string>
+    <string name="settings_home_date_label">Mostrar data</string>
+    <string name="settings_home_24h_label">Usar format de 24 hores</string>
     <string name="theme_dark">Fosc</string>
     <string name="theme_light">Clar</string>
     <string name="settings_usage_title">Us i recordatoris</string>

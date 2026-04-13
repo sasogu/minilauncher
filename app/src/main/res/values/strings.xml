@@ -40,6 +40,9 @@
     <string name="settings_home_title">Inicio</string>
     <string name="settings_home_subtitle">Personaliza la informacion visible en la cabecera principal.</string>
     <string name="settings_moon_percentage_label">Mostrar porcentaje de iluminacion lunar</string>
+    <string name="settings_home_weekday_label">Mostrar dia de la semana</string>
+    <string name="settings_home_date_label">Mostrar fecha</string>
+    <string name="settings_home_24h_label">Usar formato de 24 horas</string>
     <string name="theme_dark">Oscuro</string>
     <string name="theme_light">Claro</string>
     <string name="settings_usage_title">Uso y recordatorios</string>
