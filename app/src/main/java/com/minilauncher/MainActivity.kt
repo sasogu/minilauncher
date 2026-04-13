@@ -1251,6 +1251,7 @@ private fun SettingsScreen(
                                     )
                                 }
                             },
+                            bottomContent = null,
                         )
                     }
                     OutlinedButton(
@@ -1449,6 +1450,7 @@ private fun FavoriteRow(
         onClick = onClick,
         onLongClick = onLongClick,
         trailing = null,
+        bottomContent = null,
     )
 }
 
@@ -1473,7 +1475,8 @@ private fun AppRow(
         showPackage = true,
         onClick = onClick,
         onLongClick = null,
-        trailing = {
+        trailing = null,
+        bottomContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -1526,6 +1529,7 @@ private fun AppNameRow(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     trailing: (@Composable (() -> Unit))?,
+    bottomContent: (@Composable (() -> Unit))? = null,
 ) {
     val palette = launcherPalette()
     val context = LocalContext.current
@@ -1601,6 +1605,10 @@ private fun AppNameRow(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+            }
+            if (bottomContent != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                bottomContent()
             }
         }
         if (trailing != null) {
