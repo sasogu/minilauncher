@@ -124,6 +124,7 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.annotation.StringRes
 
 /**
  * Devuelve el emoji de la fase lunar para una fecha dada.
@@ -196,6 +197,7 @@ class MainActivity : ComponentActivity() {
                     onOpenAppInfo = ::openAppInfo,
                     onWebSearch = ::openWebSearch,
                     onWebSearchDismiss = ::dismissWebSearch,
+                    onTransientMessageConsumed = ::onTransientMessageConsumed,
                 )
             }
         }
@@ -256,7 +258,12 @@ class MainActivity : ComponentActivity() {
             startActivity(searchIntent)
         } else {
             val uri = Uri.parse("https://duckduckgo.com/?q=${Uri.encode(query)}")
-            startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            val browserIntent = Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (browserIntent.resolveActivity(packageManager) != null) {
+                startActivity(browserIntent)
+            } else {
+                showTransientMessage(R.string.error_no_browser)
+            }
         }
         dismissWebSearch()
     }
@@ -268,6 +275,8 @@ class MainActivity : ComponentActivity() {
         }
         if (appInfoIntent.resolveActivity(packageManager) != null) {
             startActivity(appInfoIntent)
+        } else {
+            showTransientMessage(R.string.error_no_app_info)
         }
     }
 
@@ -329,6 +338,10 @@ class MainActivity : ComponentActivity() {
 
     private fun onHiddenAppNoticeConsumed() {
         launcherViewModel.dispatch(LauncherUiAction.HiddenAppNoticeConsumed)
+    }
+
+    private fun onTransientMessageConsumed() {
+        launcherViewModel.dispatch(LauncherUiAction.TransientMessageChanged(null))
     }
 
     private fun openApp(app: LaunchableApp) {
@@ -447,6 +460,8 @@ class MainActivity : ComponentActivity() {
 
         if (launchIntent != null) {
             startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } else {
+            showTransientMessage(R.string.error_no_clock_app)
         }
     }
 
@@ -462,6 +477,8 @@ class MainActivity : ComponentActivity() {
 
         if (launchIntent != null) {
             startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } else {
+            showTransientMessage(R.string.error_no_phone_app)
         }
     }
 
@@ -478,7 +495,13 @@ class MainActivity : ComponentActivity() {
 
         if (launchIntent != null) {
             startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } else {
+            showTransientMessage(R.string.error_no_camera_app)
         }
+    }
+
+    private fun showTransientMessage(@StringRes messageRes: Int) {
+        launcherViewModel.dispatch(LauncherUiAction.TransientMessageChanged(getString(messageRes)))
     }
 
 }
@@ -512,17 +535,30 @@ private fun LauncherApp(
     onOpenAppInfo: (LaunchableApp) -> Unit = {},
     onWebSearch: (String) -> Unit = {},
     onWebSearchDismiss: () -> Unit = {},
+    onTransientMessageConsumed: () -> Unit = {},
 ) {
     val palette = launcherPalette()
     val pagerState = rememberPagerState(initialPage = 0) { 3 }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val visibleApps = remember(state.allApps, state.hiddenPackages) {
+        if (state.hiddenPackages.isEmpty()) {
+            state.allApps
+        } else {
+            val hiddenPackages = state.hiddenPackages.toSet()
+            state.allApps.filterNot { app -> app.packageName in hiddenPackages }
+        }
+    }
     val favoriteApps = remember(state.allApps, state.favoritePackages) {
         val appsByPackage = state.allApps.associateBy { it.packageName }
         state.favoritePackages.mapNotNull { appsByPackage[it] }
     }
-    val filteredFavoriteApps = remember(favoriteApps, state.homeQuery) {
-        filterApps(favoriteApps, state.homeQuery)
+    val homeApps = remember(favoriteApps, visibleApps, state.homeQuery) {
+        if (state.homeQuery.isBlank()) {
+            favoriteApps
+        } else {
+            filterApps(visibleApps, state.homeQuery)
+        }
     }
 
     Surface(
@@ -536,7 +572,8 @@ private fun LauncherApp(
             ) { page ->
                 when (page) {
                     0 -> HomeScreen(
-                        favoriteApps = filteredFavoriteApps,
+                        homeApps = homeApps,
+                        isSearching = state.homeQuery.isNotBlank(),
                         showFavoritesReorderHint = state.showHomeReorderHint,
                         homeQuery = state.homeQuery,
                         onHomeQueryChange = onHomeQueryChange,
@@ -623,13 +660,24 @@ private fun LauncherApp(
                     onHiddenAppNoticeConsumed()
                 }
             }
+
+            state.transientMessage?.let { message ->
+                LaunchedEffect(message) {
+                    snackbarHostState.showSnackbar(
+                        message = message,
+                        duration = SnackbarDuration.Short,
+                    )
+                    onTransientMessageConsumed()
+                }
+            }
         }
     }
 }
 
 @Composable
 private fun HomeScreen(
-    favoriteApps: List<LaunchableApp>,
+    homeApps: List<LaunchableApp>,
+    isSearching: Boolean,
     showFavoritesReorderHint: Boolean,
     homeQuery: String,
     onHomeQueryChange: (String) -> Unit,
@@ -662,25 +710,31 @@ private fun HomeScreen(
                     onQueryChange = onHomeQueryChange,
                 )
             }
-            if (favoriteApps.size > 1 && showFavoritesReorderHint) {
+            if (!isSearching && homeApps.size > 1 && showFavoritesReorderHint) {
                 item {
                     HomeFavoritesHintCard(onDismiss = onDismissFavoritesReorderHint)
                 }
             }
-            if (favoriteApps.isEmpty()) {
-                item {
-                    EmptyFavoritesCard(onAddFavoritesClick = onAddFavoritesClick)
+            if (homeApps.isEmpty()) {
+                if (isSearching) {
+                    item {
+                        EmptyState(query = homeQuery)
+                    }
+                } else {
+                    item {
+                        EmptyFavoritesCard(onAddFavoritesClick = onAddFavoritesClick)
+                    }
                 }
             } else {
                 items(
-                    items = favoriteApps,
+                    items = homeApps,
                     key = { app -> app.packageName },
                     contentType = { "favorite_row" },
                 ) { app ->
                     FavoriteRow(
                         app = app,
                         onClick = { onAppClick(app) },
-                        onLongClick = { onPromoteFavorite(app) },
+                        onLongClick = if (isSearching) null else { { onPromoteFavorite(app) } },
                     )
                 }
             }
@@ -1362,7 +1416,7 @@ private fun EmptyState(query: String) {
 private fun FavoriteRow(
     app: LaunchableApp,
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    onLongClick: (() -> Unit)?,
 ) {
     AppNameRow(
         app = app,

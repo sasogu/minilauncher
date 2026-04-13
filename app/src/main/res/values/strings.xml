@@ -50,6 +50,11 @@
     <string name="hidden_app_snackbar_undo">Deshacer</string>
     <string name="web_search_hint">Buscar en internet...</string>
     <string name="web_search_button">Buscar</string>
+    <string name="error_no_browser">No hay ningun navegador disponible en este dispositivo.</string>
+    <string name="error_no_app_info">No se pudo abrir la informacion de la app.</string>
+    <string name="error_no_clock_app">No hay ninguna app de reloj disponible.</string>
+    <string name="error_no_phone_app">No hay ninguna app de telefono o mensajeria disponible.</string>
+    <string name="error_no_camera_app">No hay ninguna app de camara disponible.</string>
 
     <string name="reminder_default_app">esta app</string>
     <string name="reminder_title">Tiempo cumplido</string>

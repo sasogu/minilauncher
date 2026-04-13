@@ -27,6 +27,7 @@ sealed interface LauncherUiAction {
     data object DismissWebSearch : LauncherUiAction
     data class PendingLaunchChanged(val app: LaunchableApp?) : LauncherUiAction
     data class TimeoutNoticeChanged(val notice: TimeoutNotice?) : LauncherUiAction
+    data class TransientMessageChanged(val message: String?) : LauncherUiAction
     data object RefreshApps : LauncherUiAction
 }
 
@@ -155,6 +156,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
             is LauncherUiAction.TimeoutNoticeChanged -> {
                 _uiState.value = _uiState.value.copy(timeoutNotice = action.notice)
+            }
+
+            is LauncherUiAction.TransientMessageChanged -> {
+                _uiState.value = _uiState.value.copy(transientMessage = action.message)
             }
 
             LauncherUiAction.RefreshApps -> {

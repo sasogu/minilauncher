@@ -50,6 +50,11 @@
     <string name="hidden_app_snackbar_undo">Desfer</string>
     <string name="web_search_hint">Cerca en internet...</string>
     <string name="web_search_button">Cerca</string>
+    <string name="error_no_browser">No hi ha cap navegador disponible en este dispositiu.</string>
+    <string name="error_no_app_info">No ha sigut possible obrir la informació de la app.</string>
+    <string name="error_no_clock_app">No hi ha cap app de rellotge disponible.</string>
+    <string name="error_no_phone_app">No hi ha cap app de telèfon o missatgeria disponible.</string>
+    <string name="error_no_camera_app">No hi ha cap app de càmera disponible.</string>
 
     <string name="reminder_default_app">esta app</string>
     <string name="reminder_title">Temps complit</string>

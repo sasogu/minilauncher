@@ -27,6 +27,7 @@ data class LauncherUiState(
     val lastHiddenApp: LaunchableApp? = null,
     val pendingLaunchApp: LaunchableApp? = null,
     val timeoutNotice: TimeoutNotice? = null,
+    val transientMessage: String? = null,
     val selectedLanguage: AppLanguage = AppLanguage.SPANISH,
     val selectedThemeMode: ThemeMode = ThemeMode.DARK,
     val usagePromptEnabled: Boolean = false,

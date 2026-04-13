@@ -50,6 +50,11 @@
     <string name="hidden_app_snackbar_undo">Undo</string>
     <string name="web_search_hint">Search the web...</string>
     <string name="web_search_button">Search</string>
+    <string name="error_no_browser">No browser is available on this device.</string>
+    <string name="error_no_app_info">Could not open the app info screen.</string>
+    <string name="error_no_clock_app">No clock app is available.</string>
+    <string name="error_no_phone_app">No phone or messaging app is available.</string>
+    <string name="error_no_camera_app">No camera app is available.</string>
 
     <string name="reminder_default_app">this app</string>
     <string name="reminder_title">Time is up</string>
