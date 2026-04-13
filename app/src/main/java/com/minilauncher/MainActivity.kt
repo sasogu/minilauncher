@@ -1025,8 +1025,22 @@ private fun ClockHeader(
         }
     }
 
-    val timeText = remember(now) {
+    val timeText = remember(now, use24HourTime, locale) {
         SimpleDateFormat(if (use24HourTime) "HH:mm" else "h:mm a", locale).format(now)
+    }
+    val (mainTimeText, meridiemText) = remember(timeText, use24HourTime, locale) {
+        if (use24HourTime) {
+            timeText to null
+        } else {
+            val separatorIndex = timeText.lastIndexOf(' ')
+            if (separatorIndex > 0 && separatorIndex < timeText.length - 1) {
+                val main = timeText.substring(0, separatorIndex)
+                val meridiem = timeText.substring(separatorIndex + 1).uppercase(locale)
+                main to meridiem
+            } else {
+                timeText to null
+            }
+        }
     }
     val weekdayText = remember(now) {
         SimpleDateFormat("EEEE", locale).format(now)
@@ -1084,12 +1098,34 @@ private fun ClockHeader(
             }
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = timeText,
-                    color = palette.textPrimary,
-                    fontSize = 40.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                if (meridiemText == null) {
+                    Text(
+                        text = mainTimeText,
+                        color = palette.textPrimary,
+                        fontSize = 40.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                } else {
+                    Row(
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        Text(
+                            text = mainTimeText,
+                            color = palette.textPrimary,
+                            fontSize = 40.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = meridiemText,
+                            color = palette.textSecondary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(bottom = 8.dp),
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 if (showWeekday) {
                     Text(
