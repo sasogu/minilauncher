@@ -91,9 +91,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -545,20 +545,24 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openAlarms() {
-        val intents = listOf(
+        val opened = openFirstAvailableIntent(
             Intent(AlarmClock.ACTION_SHOW_ALARMS),
             Intent(AlarmClock.ACTION_SET_ALARM),
         )
-
-        val launchIntent = intents.firstOrNull { intent ->
-            intent.resolveActivity(packageManager) != null
-        }
-
-        if (launchIntent != null) {
-            startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        } else {
+        if (!opened) {
             showTransientMessage(R.string.error_no_clock_app)
         }
+    }
+
+    private fun openFirstAvailableIntent(vararg intents: Intent): Boolean {
+        intents.forEach { intent ->
+            val opened = runCatching {
+                startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                true
+            }.getOrDefault(false)
+            if (opened) return true
+        }
+        return false
     }
 
     private fun openPhone() {
@@ -1466,7 +1470,6 @@ private fun SettingsScreen(
                 }
             }
         }
-
         item {
             SettingsCard(title = stringResource(R.string.settings_usage_title)) {
                 Text(

@@ -210,20 +210,10 @@ class AppsRepository(
         val apps: List<ResolveInfo> = packageManager.queryIntentActivities(intent, 0)
 
         return apps
-            .mapNotNull { resolveInfo ->
-                val packageName = resolveInfo.activityInfo?.packageName ?: return@mapNotNull null
-                val label = resolveInfo.loadLabel(packageManager)?.toString()?.trim().orEmpty()
-                if (label.isBlank()) return@mapNotNull null
-
-                LaunchableApp(
-                    label = label,
-                    packageName = packageName,
-                )
-            }
+            .mapNotNull(::resolveToLaunchableApp)
             .distinctBy { it.packageName }
             .sortedBy { normalize(it.label) }
     }
-
     override suspend fun prewarmIcons(apps: List<LaunchableApp>, maxIcons: Int) {
         val toWarm = apps.asSequence()
             .map { it.packageName }
@@ -240,6 +230,17 @@ class AppsRepository(
                 AppIconCache.put(packageName, bitmap)
             }
         }
+    }
+
+    private fun resolveToLaunchableApp(resolveInfo: ResolveInfo): LaunchableApp? {
+        val packageName = resolveInfo.activityInfo?.packageName ?: return null
+        val label = resolveInfo.loadLabel(packageManager)?.toString()?.trim().orEmpty()
+        if (label.isBlank()) return null
+
+        return LaunchableApp(
+            label = label,
+            packageName = packageName,
+        )
     }
 }
 
