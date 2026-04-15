@@ -1,0 +1,7 @@
+- System timezone selector integration in home.
+- One-tap clear actions in search fields.
+- Improved 12h clock meridiem (AM/PM) alignment.
+- Home header toggles for weekday display and 12h/24h time format.
+- Moon phase orientation fix (waxing/waning).
+- Option to reset launcher to home screen on HOME intent.
+- Configurable moon illumination percentage in home.

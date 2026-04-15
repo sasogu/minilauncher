@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.4.0
+
+- Selector de zona horaria del sistema integrado en home.
+- Botones para limpiar con un clic en campos de búsqueda.
+- Alineación mejorada del meridiano (AM/PM) en reloj de 12 horas.
+- Toggles en header de home para mostrar/ocultar día de la semana y formato de hora 12h/24h.
+- Corrección de orientación de fases lunares (creciente/menguante).
+- Opción para resetear el launcher a pantalla principal al tocar intent HOME.
+- Porcentaje configurable de iluminación lunar en home.
+
 ## 0.3.0
 
 - Etiquetas por aplicacion con edicion directa desde el listado.
