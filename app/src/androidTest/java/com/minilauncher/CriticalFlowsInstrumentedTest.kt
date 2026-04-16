@@ -1,4 +1,4 @@
-package com.minilauncher
+package es.sasogu.minilauncher
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule

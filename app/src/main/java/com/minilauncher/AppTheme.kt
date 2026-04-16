@@ -1,4 +1,4 @@
-package com.minilauncher
+package es.sasogu.minilauncher
 
 import android.content.Context
 import androidx.compose.material3.MaterialTheme

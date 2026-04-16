@@ -1,4 +1,4 @@
-package com.minilauncher
+package es.sasogu.minilauncher
 
 import android.content.Intent
 import android.content.pm.PackageManager

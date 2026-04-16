@@ -1,4 +1,4 @@
-package com.minilauncher
+package es.sasogu.minilauncher
 
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals

@@ -2,29 +2,29 @@
 
 Estado actual para envio a F-Droid:
 
+- Estado: en pausa hasta decidir la estrategia de paquete tras el cambio a `es.sasogu.minilauncher`
+
 - Repositorio publico: https://github.com/sasogu/minilauncher
 - Branch publicado: main
-- Proximo tag: v0.3.0
+- Proximo tag: v0.5.0
 - Licencia incluida: Apache-2.0
 - Metadata fastlane base incluida
 
 ## Checklist inmediato
 
-1. Release en GitHub creada: https://github.com/sasogu/minilauncher/releases/tag/v0.3.0
-2. Changelog de fastlane actualizado para `versionCode 3`
-3. Metadata `en-US` revisada y traducida completamente al ingles
-4. Gradle Wrapper alineado con Gradle 8.12 y `distributionSha256Sum` configurado
-5. Validacion local completada: `./gradlew testDebugUnitTest` y `./gradlew assembleRelease`
-6. Pendiente: abrir solicitud en https://gitlab.com/fdroid/fdroiddata/-/issues con la plantilla de abajo
+1. Pendiente decidir si F-Droid seguira con el paquete antiguo o con `es.sasogu.minilauncher`
+2. Preparar release y metadata definitivas para `0.5.0`
+3. Changelog de fastlane a regenerar para `versionCode 5`
+4. Validacion local a repetir con el nuevo paquete antes de abrir solicitud en fdroiddata
 
 ## Datos del proyecto
 
 - App name: Minilauncher
-- Application ID: com.minilauncher
+- Application ID: es.sasogu.minilauncher
 - Repo: https://github.com/sasogu/minilauncher
 - License: Apache-2.0
-- Version name: 0.3.0
-- Version code: 3
+- Version name: 0.5.0
+- Version code: 5
 - Build command: ./gradlew assembleRelease
 - Min SDK: 26
 - Target SDK: 35
@@ -55,11 +55,11 @@ Body:
 ### Please add my app to F-Droid
 
 - Name: Minilauncher
-- Application ID: com.minilauncher
+- Application ID: es.sasogu.minilauncher
 - Source code: https://github.com/sasogu/minilauncher
 - License: Apache-2.0
-- Current version: 0.3.0 (versionCode 3)
-- Release: https://github.com/sasogu/minilauncher/releases/tag/v0.3.0
+- Current version: 0.5.0 (versionCode 5)
+- Release: pendiente de crear para v0.5.0
 - Build command: ./gradlew assembleRelease
 - Min SDK: 26
 - Target SDK: 35
@@ -92,11 +92,11 @@ Notes:
 Please add my app to F-Droid.
 
 - Name: Minilauncher
-- Application ID: com.minilauncher
+- Application ID: es.sasogu.minilauncher
 - Source code: https://github.com/sasogu/minilauncher
 - License: Apache-2.0
-- Current version: 0.3.0 (versionCode 3)
-- Release: https://github.com/sasogu/minilauncher/releases/tag/v0.3.0
+- Current version: 0.5.0 (versionCode 5)
+- Release: pendiente de crear para v0.5.0
 - Build command: ./gradlew assembleRelease
 - Min SDK: 26
 - Target SDK: 35
@@ -105,7 +105,7 @@ Please add my app to F-Droid.
 
 Archivo esperado en fdroiddata:
 
-metadata/com.minilauncher.yml
+metadata/es.sasogu.minilauncher.yml
 
 Plantilla inicial:
 
@@ -133,16 +133,16 @@ RepoType: git
 Repo: https://github.com/sasogu/minilauncher.git
 
 Builds:
-  - versionName: 0.3.0
-    versionCode: 3
-    commit: v0.3.0
+  - versionName: 0.5.0
+    versionCode: 5
+    commit: v0.5.0
     gradle:
       - yes
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 0.3.0
-CurrentVersionCode: 3
+CurrentVersion: 0.5.0
+CurrentVersionCode: 5
 ```
 
 Nota: el equipo de F-Droid puede ajustar esta metadata durante la revision.

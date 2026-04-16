@@ -1,4 +1,4 @@
-package com.minilauncher
+package es.sasogu.minilauncher
 
 import android.Manifest
 import android.content.BroadcastReceiver

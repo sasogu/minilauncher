@@ -4,7 +4,7 @@ Launcher minimalista para Android, pensado para reducir fricción, ruido visual 
 
 ## Estado
 
-Version preparada: `0.3.0`
+Version preparada: `0.5.0`
 
 Incluye:
 
@@ -143,10 +143,9 @@ Los recordatorios de uso se generan localmente en el dispositivo.
 
 ## F-Droid
 
-Release publicada para inicio de alta en F-Droid:
+Envio a F-Droid en pausa temporal mientras se decide si mantener el paquete antiguo o publicar tambien alli con el nuevo identificador `es.sasogu.minilauncher`.
 
-- proxima tag: `v0.3.0`
-- proxima release: `https://github.com/sasogu/minilauncher/releases/tag/v0.3.0`
+- proxima tag prevista: `v0.5.0`
 
 
 ## Roadmap

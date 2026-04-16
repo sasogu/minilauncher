@@ -1,4 +1,4 @@
-package com.minilauncher
+package es.sasogu.minilauncher
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

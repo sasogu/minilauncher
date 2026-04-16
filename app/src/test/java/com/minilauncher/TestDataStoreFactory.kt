@@ -1,4 +1,4 @@
-package com.minilauncher
+package es.sasogu.minilauncher
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences

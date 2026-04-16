@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.5.0
+
+- Cambio de identificador de aplicacion a `es.sasogu.minilauncher` para desbloquear la publicacion en Google Play.
+- Preparacion de firma release con keystore externo mediante `key.properties`.
+- Documentacion de release alineada con la nueva version y la pausa temporal del envio a F-Droid.
+
 ## 0.4.0
 
 - Selector de zona horaria del sistema integrado en home.
