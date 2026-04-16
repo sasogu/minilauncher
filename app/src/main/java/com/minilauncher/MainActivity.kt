@@ -173,6 +173,11 @@ internal fun lunarPhaseText(
     }
 }
 
+private data class BatteryStatus(
+    val level: Int,
+    val isCharging: Boolean,
+)
+
 class MainActivity : ComponentActivity() {
     private val launcherViewModel: LauncherViewModel by viewModels()
     private val homeReturnSignal = mutableStateOf(0)
@@ -1023,7 +1028,7 @@ private fun ClockHeader(
 ) {
     val palette = launcherPalette()
     var now by remember { mutableStateOf(Date()) }
-    val batteryLevel by rememberBatteryLevel()
+    val batteryStatus by rememberBatteryStatus()
     val context = LocalContext.current
     val locale = remember(context.resources.configuration.locales) {
         context.resources.configuration.locales[0] ?: Locale.getDefault()
@@ -1085,7 +1090,8 @@ private fun ClockHeader(
                 val inset = strokeWidth / 2f + 4.dp.toPx()
                 val arcSize = size.minDimension - inset * 2
                 val topLeft = Offset(inset, inset)
-                val sweepAngle = 360f * (batteryLevel / 100f)
+                val sweepAngle = 360f * (batteryStatus.level / 100f)
+                val progressColor = if (batteryStatus.isCharging) palette.batteryCharging else palette.textPrimary
 
                 drawArc(
                     color = palette.inputBorderUnfocused,
@@ -1098,7 +1104,7 @@ private fun ClockHeader(
                 )
 
                 drawArc(
-                    color = palette.textPrimary,
+                    color = progressColor,
                     startAngle = -90f,
                     sweepAngle = sweepAngle,
                     useCenter = false,
@@ -1171,38 +1177,46 @@ private fun ClockHeader(
 }
 
 @Composable
-private fun rememberBatteryLevel(): State<Int> {
+private fun rememberBatteryStatus(): State<BatteryStatus> {
     val context = LocalContext.current
-    val batteryLevel = remember { mutableStateOf(readBatteryLevel(context)) }
+    val batteryStatus = remember { mutableStateOf(readBatteryStatus(context)) }
 
     DisposableEffect(context) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                batteryLevel.value = readBatteryLevel(context ?: return)
+                batteryStatus.value = readBatteryStatus(context ?: return, intent)
             }
         }
 
         val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
         val stickyIntent = context.registerReceiver(receiver, filter)
-        batteryLevel.value = readBatteryLevel(context, stickyIntent)
+        batteryStatus.value = readBatteryStatus(context, stickyIntent)
 
         onDispose {
             runCatching { context.unregisterReceiver(receiver) }
         }
     }
 
-    return batteryLevel
+    return batteryStatus
 }
 
-private fun readBatteryLevel(
+private fun readBatteryStatus(
     context: Context,
     intent: Intent? = null,
-): Int {
+): BatteryStatus {
     val batteryIntent = intent ?: context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
     val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
     val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
-    if (level < 0 || scale <= 0) return 0
-    return ((level / scale.toFloat()) * 100).toInt().coerceIn(0, 100)
+    val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+    val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+        status == BatteryManager.BATTERY_STATUS_FULL
+    if (level < 0 || scale <= 0) {
+        return BatteryStatus(level = 0, isCharging = isCharging)
+    }
+    return BatteryStatus(
+        level = ((level / scale.toFloat()) * 100).toInt().coerceIn(0, 100),
+        isCharging = isCharging,
+    )
 }
 
 @Composable

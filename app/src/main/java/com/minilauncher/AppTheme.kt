@@ -34,6 +34,7 @@ data class LauncherPalette(
     val inputBackground: androidx.compose.ui.graphics.Color,
     val inputBorderFocused: androidx.compose.ui.graphics.Color,
     val inputBorderUnfocused: androidx.compose.ui.graphics.Color,
+    val batteryCharging: androidx.compose.ui.graphics.Color,
 )
 
 private val DarkPalette = LauncherPalette(
@@ -47,6 +48,7 @@ private val DarkPalette = LauncherPalette(
     inputBackground = androidx.compose.ui.graphics.Color(0xFF101010),
     inputBorderFocused = androidx.compose.ui.graphics.Color(0xFFBDBDBD),
     inputBorderUnfocused = androidx.compose.ui.graphics.Color(0xFF4A4A4A),
+    batteryCharging = androidx.compose.ui.graphics.Color(0xFF4ADE80),
 )
 
 private val LightPalette = LauncherPalette(
@@ -60,6 +62,7 @@ private val LightPalette = LauncherPalette(
     inputBackground = androidx.compose.ui.graphics.Color(0xFFFFFFFF),
     inputBorderFocused = androidx.compose.ui.graphics.Color(0xFF374151),
     inputBorderUnfocused = androidx.compose.ui.graphics.Color(0xFFD1D5DB),
+    batteryCharging = androidx.compose.ui.graphics.Color(0xFF16A34A),
 )
 
 private val LocalLauncherPalette = staticCompositionLocalOf { DarkPalette }
