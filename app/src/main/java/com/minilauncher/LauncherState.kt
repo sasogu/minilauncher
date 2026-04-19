@@ -19,6 +19,7 @@ import java.util.Locale
 data class LauncherUiState(
     val query: String = "",
     val homeQuery: String = "",
+    val webSearchQuery: String = "",
     val allApps: List<LaunchableApp> = emptyList(),
     val filteredApps: List<LaunchableApp> = emptyList(),
     val favoritePackages: List<String> = emptyList(),
@@ -78,6 +79,10 @@ class LauncherStateStore(
 
     fun onHomeQueryChange(state: LauncherUiState, query: String): LauncherUiState {
         return state.copy(homeQuery = query)
+    }
+
+    fun onWebSearchQueryChange(state: LauncherUiState, query: String): LauncherUiState {
+        return state.copy(webSearchQuery = query)
     }
 
     suspend fun toggleFavorite(state: LauncherUiState, app: LaunchableApp): LauncherUiState {

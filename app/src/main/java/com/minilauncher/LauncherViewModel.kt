@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 sealed interface LauncherUiAction {
     data class QueryChanged(val query: String) : LauncherUiAction
     data class HomeQueryChanged(val query: String) : LauncherUiAction
+    data class WebSearchQueryChanged(val query: String) : LauncherUiAction
     data class ToggleFavorite(val app: LaunchableApp) : LauncherUiAction
     data class PromoteFavorite(val app: LaunchableApp) : LauncherUiAction
     data class HideApp(val app: LaunchableApp) : LauncherUiAction
@@ -67,6 +68,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
             is LauncherUiAction.HomeQueryChanged -> {
                 _uiState.value = launcherStateStore.onHomeQueryChange(_uiState.value, action.query)
+            }
+
+            is LauncherUiAction.WebSearchQueryChanged -> {
+                _uiState.value = launcherStateStore.onWebSearchQueryChange(_uiState.value, action.query)
             }
 
             is LauncherUiAction.ToggleFavorite -> {

@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.BroadcastReceiver
 import android.app.AlarmManager
 import android.app.PendingIntent
-import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -265,6 +264,7 @@ class MainActivity : ComponentActivity() {
                     onOpenWebSearch = ::onOpenWebSearch,
                     onOpenAppInfo = ::openAppInfo,
                     onWebSearch = ::openWebSearch,
+                    onWebSearchQueryChange = ::onWebSearchQueryChange,
                     onWebSearchDismiss = ::dismissWebSearch,
                     onTransientMessageConsumed = ::onTransientMessageConsumed,
                 )
@@ -326,21 +326,25 @@ class MainActivity : ComponentActivity() {
         launcherViewModel.dispatch(LauncherUiAction.OpenWebSearch)
     }
 
+    private fun onWebSearchQueryChange(query: String) {
+        launcherViewModel.dispatch(LauncherUiAction.WebSearchQueryChanged(query))
+    }
+
     private fun openWebSearch(query: String) {
-        val searchIntent = Intent(Intent.ACTION_WEB_SEARCH).apply {
-            putExtra(SearchManager.QUERY, query)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val normalizedQuery = query.trim()
+        if (normalizedQuery.isBlank()) {
+            dismissWebSearch()
+            return
         }
-        if (searchIntent.resolveActivity(packageManager) != null) {
-            startActivity(searchIntent)
+
+        launcherViewModel.dispatch(LauncherUiAction.WebSearchQueryChanged(normalizedQuery))
+
+        val uri = Uri.parse("https://duckduckgo.com/?q=${Uri.encode(normalizedQuery)}")
+        val browserIntent = Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (browserIntent.resolveActivity(packageManager) != null) {
+            startActivity(browserIntent)
         } else {
-            val uri = Uri.parse("https://duckduckgo.com/?q=${Uri.encode(query)}")
-            val browserIntent = Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            if (browserIntent.resolveActivity(packageManager) != null) {
-                startActivity(browserIntent)
-            } else {
-                showTransientMessage(R.string.error_no_browser)
-            }
+            showTransientMessage(R.string.error_no_browser)
         }
         dismissWebSearch()
     }
@@ -655,6 +659,7 @@ private fun LauncherApp(
     onOpenWebSearch: () -> Unit = {},
     onOpenAppInfo: (LaunchableApp) -> Unit = {},
     onWebSearch: (String) -> Unit = {},
+    onWebSearchQueryChange: (String) -> Unit = {},
     onWebSearchDismiss: () -> Unit = {},
     onTransientMessageConsumed: () -> Unit = {},
 ) {
@@ -783,6 +788,8 @@ private fun LauncherApp(
             }
             if (state.showWebSearch) {
                 WebSearchDialog(
+                    query = state.webSearchQuery,
+                    onQueryChange = onWebSearchQueryChange,
                     onSearch = onWebSearch,
                     onDismiss = onWebSearchDismiss,
                 )
@@ -2168,11 +2175,12 @@ private fun TimeoutReachedDialog(
 
 @Composable
 private fun WebSearchDialog(
+    query: String,
+    onQueryChange: (String) -> Unit,
     onSearch: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val palette = launcherPalette()
-    var query by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
     val interactionSource = remember { MutableInteractionSource() }
     BackHandler(onBack = onDismiss)
@@ -2202,7 +2210,7 @@ private fun WebSearchDialog(
             ) {
                 OutlinedTextField(
                     value = query,
-                    onValueChange = { query = it },
+                    onValueChange = onQueryChange,
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(focusRequester),
@@ -2221,7 +2229,7 @@ private fun WebSearchDialog(
                     trailingIcon = {
                         if (query.isNotBlank()) {
                             ClearTextButton(
-                                onClear = { query = "" },
+                                onClear = { onQueryChange("") },
                                 interactionSource = interactionSource,
                                 tint = palette.textPrimary,
                             )
