@@ -577,14 +577,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openFirstAvailableIntent(vararg intents: Intent): Boolean {
-        intents.forEach { intent ->
-            val opened = runCatching {
-                startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                true
-            }.getOrDefault(false)
-            if (opened) return true
-        }
-        return false
+        val resolved = intents.firstOrNull { it.resolveActivity(packageManager) != null } ?: return false
+        return runCatching {
+            startActivity(resolved.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            true
+        }.getOrDefault(false)
     }
 
     private fun openPhone() {

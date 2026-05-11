@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.6.1
+
+- Corrección del bug del reloj que mostraba un selector vacio cuando no habia app de alarmas instalada.
+- Mejora de la deteccion de apps de reloj, telefono, camara y navegador con queries explicitas en Android 11+.
+
 ## 0.6.0
 
 - Nueva pantalla de etiquetas accesible deslizando a la derecha desde la pantalla principal.
