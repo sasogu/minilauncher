@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.6.0
+
+- Nueva pantalla de etiquetas accesible deslizando a la derecha desde la pantalla principal.
+- Filtrado de apps por etiqueta con acciones completas (favorita, ocultar, editar etiquetas).
+- Soporte para accesos directos de aplicaciones (shortcuts), como chats de Telegram.
+- Los shortcuts aparecen en el listado con su icono real y se abren directamente al pulsar.
+
 ## 0.5.0
 
 - Cambio de identificador de aplicacion a `es.sasogu.minilauncher` para desbloquear la publicacion en Google Play.
