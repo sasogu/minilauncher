@@ -66,6 +66,11 @@
     <string name="tag_editor_hint">Ejemplo: trabajo, lectura, mapas</string>
     <string name="tag_editor_support">Separa las etiquetas con comas o saltos de linea.</string>
     <string name="tag_editor_save">Guardar</string>
+    <string name="tags_title">Etiquetas</string>
+    <string name="tags_empty_title">Sin etiquetas todavia</string>
+    <string name="tags_empty_subtitle">Añade etiquetas a tus apps desde la lista de aplicaciones.</string>
+    <string name="tags_apps_count">%1$d apps</string>
+
     <string name="error_no_browser">No hay ningun navegador disponible en este dispositivo.</string>
     <string name="error_no_app_info">No se pudo abrir la informacion de la app.</string>
     <string name="error_no_clock_app">No hay ninguna app de reloj disponible.</string>

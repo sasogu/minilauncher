@@ -66,6 +66,11 @@
     <string name="tag_editor_hint">Example: work, reading, maps</string>
     <string name="tag_editor_support">Separate tags with commas or line breaks.</string>
     <string name="tag_editor_save">Save</string>
+    <string name="tags_title">Tags</string>
+    <string name="tags_empty_title">No tags yet</string>
+    <string name="tags_empty_subtitle">Add tags to your apps from the apps list.</string>
+    <string name="tags_apps_count">%1$d apps</string>
+
     <string name="error_no_browser">No browser is available on this device.</string>
     <string name="error_no_app_info">Could not open the app info screen.</string>
     <string name="error_no_clock_app">No clock app is available.</string>

@@ -673,7 +673,7 @@ private fun LauncherApp(
     onTransientMessageConsumed: () -> Unit = {},
 ) {
     val palette = launcherPalette()
-    val pagerState = rememberPagerState(initialPage = 0) { 3 }
+    val pagerState = rememberPagerState(initialPage = 1) { 4 }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     var appTagEditor by remember { mutableStateOf<LaunchableApp?>(null) }
@@ -699,7 +699,7 @@ private fun LauncherApp(
 
     LaunchedEffect(homeReturnSignal) {
         if (homeReturnSignal > 0) {
-            pagerState.scrollToPage(0)
+            pagerState.scrollToPage(1)
         }
     }
 
@@ -713,7 +713,17 @@ private fun LauncherApp(
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
                 when (page) {
-                    0 -> HomeScreen(
+                    0 -> TagsScreen(
+                        state = state,
+                        isCurrentPage = pagerState.currentPage == 0,
+                        onAppClick = onAppClick,
+                        onToggleFavorite = onToggleFavorite,
+                        onHideApp = onHideApp,
+                        onEditTags = { appTagEditor = it },
+                        onOpenAppInfo = onOpenAppInfo,
+                    )
+
+                    1 -> HomeScreen(
                         homeApps = homeApps,
                         showMoonIlluminationPercentage = state.showMoonIlluminationPercentage,
                         showWeekday = state.showHomeWeekday,
@@ -727,13 +737,13 @@ private fun LauncherApp(
                         onPromoteFavorite = onPromoteFavorite,
                         onDismissFavoritesReorderHint = onDismissHomeReorderHint,
                         onClockClick = onClockClick,
-                        onAddFavoritesClick = { scope.launch { pagerState.animateScrollToPage(1) } },
+                        onAddFavoritesClick = { scope.launch { pagerState.animateScrollToPage(2) } },
                         onPhoneClick = onPhoneClick,
                         onCameraClick = onCameraClick,
                         onOpenWebSearch = onOpenWebSearch,
                     )
 
-                    1 -> AppsScreen(
+                    2 -> AppsScreen(
                         state = state,
                         onQueryChange = onQueryChange,
                         onAppClick = onAppClick,
@@ -741,7 +751,7 @@ private fun LauncherApp(
                         onHideApp = onHideApp,
                         onEditTags = { appTagEditor = it },
                         onOpenAppInfo = onOpenAppInfo,
-                        onOpenSettings = { scope.launch { pagerState.animateScrollToPage(2) } },
+                        onOpenSettings = { scope.launch { pagerState.animateScrollToPage(3) } },
                     )
 
                     else -> SettingsScreen(
@@ -765,7 +775,7 @@ private fun LauncherApp(
                         hiddenApps = state.hiddenApps,
                         onRestoreHiddenApp = onRestoreHiddenApp,
                         onRestoreAllHiddenApps = onRestoreAllHiddenApps,
-                        onBackToApps = { scope.launch { pagerState.animateScrollToPage(1) } },
+                        onBackToApps = { scope.launch { pagerState.animateScrollToPage(2) } },
                     )
                 }
             }
@@ -932,6 +942,173 @@ private fun HomeScreen(
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 0.dp),
+        )
+    }
+}
+
+@Composable
+private fun TagsScreen(
+    state: LauncherUiState,
+    isCurrentPage: Boolean,
+    onAppClick: (LaunchableApp) -> Unit,
+    onToggleFavorite: (LaunchableApp) -> Unit,
+    onHideApp: (LaunchableApp) -> Unit,
+    onEditTags: (LaunchableApp) -> Unit,
+    onOpenAppInfo: (LaunchableApp) -> Unit,
+) {
+    val palette = launcherPalette()
+    var selectedTag by rememberSaveable { mutableStateOf<String?>(null) }
+    val hiddenSet = remember(state.hiddenPackages) { state.hiddenPackages.toSet() }
+    val visibleApps = remember(state.allApps, hiddenSet) {
+        state.allApps.filterNot { it.appId in hiddenSet }
+    }
+    val tagCounts = remember(visibleApps) {
+        val counts = mutableMapOf<String, Int>()
+        visibleApps.forEach { app -> app.tags.forEach { tag -> counts[tag] = (counts[tag] ?: 0) + 1 } }
+        counts.entries.map { it.key to it.value }.sortedBy { (tag, _) -> normalize(tag) }
+    }
+    val favoriteAppIds = remember(state.favoritePackages) { state.favoritePackages.toSet() }
+
+    BackHandler(enabled = isCurrentPage && selectedTag != null) {
+        selectedTag = null
+    }
+
+    if (selectedTag != null) {
+        val tag = selectedTag!!
+        val appsForTag = remember(visibleApps, tag) {
+            visibleApps.filter { app -> app.tags.contains(tag) }
+        }
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(palette.background),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+        ) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 24.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "#$tag",
+                        color = palette.textPrimary,
+                        fontSize = 34.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    TextButton(onClick = { selectedTag = null }) {
+                        Text(
+                            text = stringResource(R.string.tags_title),
+                            color = palette.textSecondary,
+                        )
+                    }
+                }
+            }
+            if (appsForTag.isEmpty()) {
+                item {
+                    EmptyState(query = "")
+                }
+            } else {
+                items(appsForTag, key = { it.appId }, contentType = { "app_row" }) { app ->
+                    AppRow(
+                        app = app,
+                        isFavorite = app.appId in favoriteAppIds,
+                        onClick = { onAppClick(app) },
+                        onOpenAppInfo = { onOpenAppInfo(app) },
+                        onToggleFavorite = { onToggleFavorite(app) },
+                        onHideApp = { onHideApp(app) },
+                        onEditTags = { onEditTags(app) },
+                    )
+                }
+            }
+            item { Spacer(modifier = Modifier.height(24.dp)) }
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(palette.background),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+        ) {
+            item {
+                Text(
+                    text = stringResource(R.string.tags_title),
+                    color = palette.textPrimary,
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 24.dp),
+                )
+            }
+            if (tagCounts.isEmpty()) {
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = palette.surface),
+                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.tags_empty_title),
+                                color = palette.textPrimary,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                text = stringResource(R.string.tags_empty_subtitle),
+                                color = palette.textSecondary,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
+                }
+            } else {
+                items(tagCounts, key = { (tag, _) -> tag }, contentType = { "tag_row" }) { (tag, count) ->
+                    TagRow(
+                        tag = tag,
+                        count = count,
+                        onClick = { selectedTag = tag },
+                    )
+                }
+            }
+            item { Spacer(modifier = Modifier.height(24.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun TagRow(
+    tag: String,
+    count: Int,
+    onClick: () -> Unit,
+) {
+    val palette = launcherPalette()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .sizeIn(minHeight = 56.dp)
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "#$tag",
+            color = palette.textPrimary,
+            fontSize = 23.sp,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = stringResource(R.string.tags_apps_count, count),
+            color = palette.textMuted,
+            style = MaterialTheme.typography.bodyMedium,
         )
     }
 }
