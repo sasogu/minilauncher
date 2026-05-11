@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.6.3
+
+- Fallback por palabra clave en el paquete cuando una app de reloj, teléfono o cámara no declara los intents estándar.
+- Esto resuelve casos en los que el dispositivo tiene la app pero el launcher no la encontraba.
+
 ## 0.6.2
 
 - Soporte real para anclar accesos directos de apps (chats de Telegram, WhatsApp, etc.) al launcher.

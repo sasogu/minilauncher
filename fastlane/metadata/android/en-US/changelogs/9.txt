@@ -1,0 +1,2 @@
+- Fallback por palabra clave en el paquete cuando una app de reloj, teléfono o cámara no declara los intents estándar.
+- Esto resuelve casos en los que el dispositivo tiene la app pero el launcher no la encontraba.

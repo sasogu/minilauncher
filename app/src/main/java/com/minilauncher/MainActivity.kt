@@ -570,7 +570,8 @@ class MainActivity : ComponentActivity() {
         val opened = openFirstAvailableIntent(
             Intent(AlarmClock.ACTION_SHOW_ALARMS),
             Intent(AlarmClock.ACTION_SET_ALARM),
-        )
+        ) || launchAppByPackageKeyword("deskclock", "alarmclock", "clockpackage", "clock", "reloj", "alarm")
+
         if (!opened) {
             showTransientMessage(R.string.error_no_clock_app)
         }
@@ -584,37 +585,39 @@ class MainActivity : ComponentActivity() {
         }.getOrDefault(false)
     }
 
+    private fun launchAppByPackageKeyword(vararg keywords: String): Boolean {
+        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val apps = packageManager.queryIntentActivities(launcherIntent, 0)
+        val match = apps.firstOrNull { resolveInfo ->
+            val pkg = resolveInfo.activityInfo.packageName.lowercase()
+            keywords.any { pkg.contains(it) }
+        } ?: return false
+        val launchIntent = packageManager.getLaunchIntentForPackage(match.activityInfo.packageName) ?: return false
+        return runCatching {
+            startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            true
+        }.getOrDefault(false)
+    }
+
     private fun openPhone() {
-        val intents = listOf(
+        val opened = openFirstAvailableIntent(
             Intent(Intent.ACTION_DIAL),
             Intent(Intent.ACTION_VIEW).apply { type = "vnd.android-dir/mms-sms" },
-        )
+        ) || launchAppByPackageKeyword("dialer", "phone", "telefon", "contacts", "contactos")
 
-        val launchIntent = intents.firstOrNull { intent ->
-            intent.resolveActivity(packageManager) != null
-        }
-
-        if (launchIntent != null) {
-            startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        } else {
+        if (!opened) {
             showTransientMessage(R.string.error_no_phone_app)
         }
     }
 
     private fun openCamera() {
-        val intents = listOf(
+        val opened = openFirstAvailableIntent(
             Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA),
             Intent("android.media.action.STILL_IMAGE_CAMERA"),
             Intent(MediaStore.ACTION_IMAGE_CAPTURE),
-        )
+        ) || launchAppByPackageKeyword("camera", "camara", "cam")
 
-        val launchIntent = intents.firstOrNull { intent ->
-            intent.resolveActivity(packageManager) != null
-        }
-
-        if (launchIntent != null) {
-            startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        } else {
+        if (!opened) {
             showTransientMessage(R.string.error_no_camera_app)
         }
     }
