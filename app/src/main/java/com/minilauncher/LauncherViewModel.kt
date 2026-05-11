@@ -1,6 +1,7 @@
 package es.sasogu.minilauncher
 
 import android.app.Application
+import android.content.pm.LauncherApps
 import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -39,7 +40,10 @@ sealed interface LauncherUiAction {
 }
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
-    private val appsRepository = AppsRepository(application.packageManager)
+    private val appsRepository = AppsRepository(
+        application.packageManager,
+        application.getSystemService(LauncherApps::class.java),
+    )
     private val favoritesStore = FavoritesStore(application.launcherDataStore)
     private val hiddenAppsStore = HiddenAppsStore(application.launcherDataStore)
     private val appTagsStore = AppTagsStore(application.launcherDataStore)

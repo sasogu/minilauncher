@@ -7,11 +7,13 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Process
 import android.provider.MediaStore
 import android.provider.AlarmClock
 import android.provider.Settings
@@ -454,6 +456,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openApp(app: LaunchableApp) {
+        if (app.shortcutId != null) {
+            runCatching {
+                getSystemService(LauncherApps::class.java)
+                    .startShortcut(app.packageName, app.shortcutId, null, null, Process.myUserHandle())
+            }
+            return
+        }
         openApp(app.packageName)
     }
 
@@ -672,13 +681,13 @@ private fun LauncherApp(
         if (state.hiddenPackages.isEmpty()) {
             state.allApps
         } else {
-            val hiddenPackages = state.hiddenPackages.toSet()
-            state.allApps.filterNot { app -> app.packageName in hiddenPackages }
+            val hiddenSet = state.hiddenPackages.toSet()
+            state.allApps.filterNot { app -> app.appId in hiddenSet }
         }
     }
     val favoriteApps = remember(state.allApps, state.favoritePackages) {
-        val appsByPackage = state.allApps.associateBy { it.packageName }
-        state.favoritePackages.mapNotNull { appsByPackage[it] }
+        val appsByAppId = state.allApps.associateBy { it.appId }
+        state.favoritePackages.mapNotNull { appsByAppId[it] }
     }
     val homeApps = remember(favoriteApps, visibleApps, state.homeQuery) {
         if (state.homeQuery.isBlank()) {
@@ -899,7 +908,7 @@ private fun HomeScreen(
             } else {
                 items(
                     items = homeApps,
-                    key = { app -> app.packageName },
+                    key = { app -> app.appId },
                     contentType = { "favorite_row" },
                 ) { app ->
                     FavoriteRow(
@@ -939,7 +948,7 @@ private fun AppsScreen(
     onOpenSettings: () -> Unit,
 ) {
     val palette = launcherPalette()
-    val favoritePackagesSet = remember(state.favoritePackages) { state.favoritePackages.toSet() }
+    val favoriteAppIds = remember(state.favoritePackages) { state.favoritePackages.toSet() }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -968,12 +977,12 @@ private fun AppsScreen(
         } else {
             items(
                 items = state.filteredApps,
-                key = { it.packageName },
+                key = { it.appId },
                 contentType = { "app_row" },
             ) { app ->
                 AppRow(
                     app = app,
-                    isFavorite = app.packageName in favoritePackagesSet,
+                    isFavorite = app.appId in favoriteAppIds,
                     onClick = { onAppClick(app) },
                     onOpenAppInfo = { onOpenAppInfo(app) },
                     onToggleFavorite = { onToggleFavorite(app) },
@@ -1907,9 +1916,9 @@ private fun AppNameRow(
     val packageManager = context.packageManager
     val iconBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(
         initialValue = null,
-        key1 = app.packageName,
+        key1 = app.appId,
     ) {
-        AppIconCache.get(app.packageName)?.let {
+        AppIconCache.get(app.appId)?.let {
             value = it.asImageBitmap()
             return@produceState
         }
@@ -1921,7 +1930,7 @@ private fun AppNameRow(
         }
 
         if (bitmap != null) {
-            AppIconCache.put(app.packageName, bitmap)
+            AppIconCache.put(app.appId, bitmap)
             value = bitmap.asImageBitmap()
         }
     }
@@ -1994,7 +2003,7 @@ private fun AppTagsDialog(
     onDismiss: () -> Unit,
     onSave: (List<String>) -> Unit,
 ) {
-    var text by rememberSaveable(app.packageName) { mutableStateOf(app.tags.joinToString(", ")) }
+    var text by rememberSaveable(app.appId) { mutableStateOf(app.tags.joinToString(", ")) }
     val interactionSource = remember { MutableInteractionSource() }
 
     AlertDialog(
