@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -27,12 +30,10 @@ jobs:
 
       - name: Create key.properties
         run: |
-          cat > key.properties << EOF
-          storeFile=${{ github.workspace }}/upload-keystore.jks
-          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyAlias=${{ secrets.KEY_ALIAS }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          EOF
+          echo "storeFile=${{ github.workspace }}/upload-keystore.jks" > key.properties
+          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> key.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> key.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> key.properties
 
       - name: Run unit tests
         run: ./gradlew :app:testDebugUnitTest
@@ -54,5 +55,3 @@ jobs:
           name: "v${{ steps.version.outputs.name }}"
           body_path: fastlane/metadata/android/en-US/changelogs/${{ steps.version.outputs.code }}.txt
           files: app/build/outputs/apk/release/app-release.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
