@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.6.2
+
+- Soporte real para anclar accesos directos de apps (chats de Telegram, WhatsApp, etc.) al launcher.
+- Nueva actividad que recibe las solicitudes de anclar shortcut y los registra en Minilauncher.
+
 ## 0.6.1
 
 - Corrección del bug del reloj que mostraba un selector vacio cuando no habia app de alarmas instalada.

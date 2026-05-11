@@ -66,6 +66,8 @@
     <string name="tag_editor_hint">Exemple: treball, lectura, mapes</string>
     <string name="tag_editor_support">Separa les etiquetes amb comes o salts de línia.</string>
     <string name="tag_editor_save">Guardar</string>
+    <string name="pinned_shortcut_added">Accés directe afegit</string>
+
     <string name="tags_title">Etiquetes</string>
     <string name="tags_empty_title">Sense etiquetes encara</string>
     <string name="tags_empty_subtitle">Afegeix etiquetes a les teues apps des de la llista d\'aplicacions.</string>

@@ -66,6 +66,8 @@
     <string name="tag_editor_hint">Example: work, reading, maps</string>
     <string name="tag_editor_support">Separate tags with commas or line breaks.</string>
     <string name="tag_editor_save">Save</string>
+    <string name="pinned_shortcut_added">Shortcut added</string>
+
     <string name="tags_title">Tags</string>
     <string name="tags_empty_title">No tags yet</string>
     <string name="tags_empty_subtitle">Add tags to your apps from the apps list.</string>
