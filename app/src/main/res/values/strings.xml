@@ -83,6 +83,14 @@
     <string name="backup_import_success">Backup importado correctamente.</string>
     <string name="backup_import_error">No se pudo importar el backup.</string>
 
+    <string name="settings_finances_title">Seguimiento financiero</string>
+    <string name="settings_finances_subtitle">Intercepta notificaciones de apps de banca para registrar pagos automáticamente en un CSV sincronizado con Nextcloud.</string>
+    <string name="settings_finances_notification_label">Acceso a notificaciones</string>
+    <string name="settings_finances_storage_label">Acceso a todos los archivos</string>
+    <string name="settings_finances_granted">Concedido</string>
+    <string name="settings_finances_grant">Conceder</string>
+    <string name="settings_finances_nextcloud_hint">Nextcloud: abre la app → ⋮ → Ajustes → Subida automática → Añadir carpeta → selecciona Documents/minilauncher-finances/</string>
+
     <string name="reminder_default_app">esta app</string>
     <string name="reminder_title">Tiempo cumplido</string>
     <string name="reminder_content">Llevas %1$d min usando %2$s</string>

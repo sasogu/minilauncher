@@ -1,0 +1,2 @@
+- Automatic finance tracking: intercepts notifications from banking apps (BBVA, CaixaBank, Bizum, Fiare, Revolut and more) and generates a daily CSV in Documents/minilauncher-finances/ to sync with Nextcloud.
+- New Settings section to grant the required permissions (notification access and file access) with Nextcloud setup instructions.

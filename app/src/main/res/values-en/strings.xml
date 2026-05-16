@@ -78,6 +78,14 @@
     <string name="error_no_clock_app">No clock app is available.</string>
     <string name="error_no_phone_app">No phone or messaging app is available.</string>
     <string name="error_no_camera_app">No camera app is available.</string>
+    <string name="settings_finances_title">Finance tracking</string>
+    <string name="settings_finances_subtitle">Intercepts banking app notifications to automatically record payments in a CSV file synced with Nextcloud.</string>
+    <string name="settings_finances_notification_label">Notification access</string>
+    <string name="settings_finances_storage_label">All files access</string>
+    <string name="settings_finances_granted">Granted</string>
+    <string name="settings_finances_grant">Grant</string>
+    <string name="settings_finances_nextcloud_hint">Nextcloud: open the app → ⋮ → Settings → Auto upload → Add folder → select Documents/minilauncher-finances/</string>
+
     <string name="backup_export_success">Backup exported successfully.</string>
     <string name="backup_export_error">Could not export the backup.</string>
     <string name="backup_import_success">Backup imported successfully.</string>

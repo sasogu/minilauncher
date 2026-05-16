@@ -13,6 +13,7 @@ import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.Process
 import android.provider.MediaStore
 import android.provider.AlarmClock
@@ -183,6 +184,8 @@ class MainActivity : ComponentActivity() {
     private val launcherViewModel: LauncherViewModel by viewModels()
     private val homeReturnSignal = mutableStateOf(0)
     private var skipReminderResetOnNextResume = false
+    private var notificationListenerGranted by mutableStateOf(false)
+    private var storagePermissionGranted by mutableStateOf(false)
     private val exportBackupLauncher =
         registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
             if (uri == null) return@registerForActivityResult
@@ -195,6 +198,10 @@ class MainActivity : ComponentActivity() {
                     toast(R.string.backup_export_error)
                 }
             }
+        }
+    private val requestStoragePermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            storagePermissionGranted = granted
         }
     private val importBackupLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -227,6 +234,7 @@ class MainActivity : ComponentActivity() {
         updateSystemBars(launcherViewModel.uiState.value.selectedThemeMode)
         enterImmersiveMode()
         handleTimeoutIntent(intent)
+        checkFinancesPermissions()
 
         setContent {
             val state by launcherViewModel.uiState.collectAsStateWithLifecycle()
@@ -269,6 +277,10 @@ class MainActivity : ComponentActivity() {
                     onWebSearchQueryChange = ::onWebSearchQueryChange,
                     onWebSearchDismiss = ::dismissWebSearch,
                     onTransientMessageConsumed = ::onTransientMessageConsumed,
+                    notificationListenerGranted = notificationListenerGranted,
+                    storagePermissionGranted = storagePermissionGranted,
+                    onOpenNotificationSettings = ::openNotificationListenerSettings,
+                    onRequestStoragePermission = ::requestStoragePermission,
                 )
             }
         }
@@ -298,6 +310,7 @@ class MainActivity : ComponentActivity() {
         }
         enterImmersiveMode()
         launcherViewModel.dispatch(LauncherUiAction.RefreshApps)
+        checkFinancesPermissions()
     }
 
     private fun enterImmersiveMode() {
@@ -560,6 +573,34 @@ class MainActivity : ComponentActivity() {
         openApp(app)
     }
 
+    private fun checkFinancesPermissions() {
+        notificationListenerGranted = NotificationManagerCompat
+            .getEnabledListenerPackages(this).contains(packageName)
+        storagePermissionGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
+                PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    private fun openNotificationListenerSettings() {
+        startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+    }
+
+    private fun requestStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            startActivity(
+                Intent(
+                    Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                    Uri.parse("package:$packageName"),
+                )
+            )
+        } else {
+            requestStoragePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        }
+    }
+
     private fun ensureNotificationPermission() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return
@@ -671,6 +712,10 @@ private fun LauncherApp(
     onWebSearchQueryChange: (String) -> Unit = {},
     onWebSearchDismiss: () -> Unit = {},
     onTransientMessageConsumed: () -> Unit = {},
+    notificationListenerGranted: Boolean = false,
+    storagePermissionGranted: Boolean = false,
+    onOpenNotificationSettings: () -> Unit = {},
+    onRequestStoragePermission: () -> Unit = {},
 ) {
     val palette = launcherPalette()
     val pagerState = rememberPagerState(initialPage = 1) { 4 }
@@ -776,6 +821,10 @@ private fun LauncherApp(
                         onRestoreHiddenApp = onRestoreHiddenApp,
                         onRestoreAllHiddenApps = onRestoreAllHiddenApps,
                         onBackToApps = { scope.launch { pagerState.animateScrollToPage(2) } },
+                        notificationListenerGranted = notificationListenerGranted,
+                        storagePermissionGranted = storagePermissionGranted,
+                        onOpenNotificationSettings = onOpenNotificationSettings,
+                        onRequestStoragePermission = onRequestStoragePermission,
                     )
                 }
             }
@@ -1508,6 +1557,10 @@ private fun SettingsScreen(
     onRestoreHiddenApp: (LaunchableApp) -> Unit,
     onRestoreAllHiddenApps: () -> Unit,
     onBackToApps: () -> Unit,
+    notificationListenerGranted: Boolean = false,
+    storagePermissionGranted: Boolean = false,
+    onOpenNotificationSettings: () -> Unit = {},
+    onRequestStoragePermission: () -> Unit = {},
 ) {
     val palette = launcherPalette()
     val haptic = LocalHapticFeedback.current
@@ -1748,6 +1801,34 @@ private fun SettingsScreen(
         }
 
         item {
+            SettingsCard(title = stringResource(R.string.settings_finances_title)) {
+                Text(
+                    text = stringResource(R.string.settings_finances_subtitle),
+                    color = palette.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                FinancesPermissionRow(
+                    label = stringResource(R.string.settings_finances_notification_label),
+                    granted = notificationListenerGranted,
+                    onGrant = onOpenNotificationSettings,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                FinancesPermissionRow(
+                    label = stringResource(R.string.settings_finances_storage_label),
+                    granted = storagePermissionGranted,
+                    onGrant = onRequestStoragePermission,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.settings_finances_nextcloud_hint),
+                    color = palette.textMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+
+        item {
             SettingsCard(title = stringResource(R.string.settings_hidden_apps_title)) {
                 Text(
                     text = stringResource(R.string.settings_hidden_apps_subtitle),
@@ -1801,6 +1882,41 @@ private fun SettingsScreen(
 
         item {
             Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun FinancesPermissionRow(
+    label: String,
+    granted: Boolean,
+    onGrant: () -> Unit,
+) {
+    val palette = launcherPalette()
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            color = palette.textPrimary,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        if (granted) {
+            Text(
+                text = stringResource(R.string.settings_finances_granted),
+                color = palette.textSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        } else {
+            TextButton(onClick = onGrant) {
+                Text(
+                    text = stringResource(R.string.settings_finances_grant),
+                    color = palette.textPrimary,
+                )
+            }
         }
     }
 }

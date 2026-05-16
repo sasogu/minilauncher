@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.7.0
+
+- Seguimiento financiero automático: intercepta notificaciones de apps bancarias (BBVA, CaixaBank, Bizum, Fiare, Revolut y más) y genera un CSV diario en Documents/minilauncher-finances/ para sincronizar con Nextcloud.
+- Nueva sección en Ajustes para conceder los permisos necesarios (acceso a notificaciones y acceso a archivos) y ver las instrucciones de configuración de Nextcloud.
+
 ## 0.6.3
 
 - Fallback por palabra clave en el paquete cuando una app de reloj, teléfono o cámara no declara los intents estándar.
