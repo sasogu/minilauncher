@@ -504,6 +504,10 @@ class MainActivity : ComponentActivity() {
             openApp(app)
             return
         }
+        if (UnlimitedDayStore.isUnlimitedToday(this, app.packageName)) {
+            openApp(app)
+            return
+        }
         launcherViewModel.dispatch(LauncherUiAction.PendingLaunchChanged(app))
     }
 
@@ -568,6 +572,7 @@ class MainActivity : ComponentActivity() {
             )
         } else {
             ReminderScheduler.resetActiveReminder(this)
+            UnlimitedDayStore.markUnlimitedToday(this, app.packageName)
         }
         dismissLaunchPrompt()
         openApp(app)

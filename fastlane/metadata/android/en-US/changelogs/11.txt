@@ -1,0 +1,1 @@
+- "Unlimited" only asks once per day: if you choose unlimited for an app, it opens directly for the rest of the day without showing the time dialog again.

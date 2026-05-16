@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.7.1
+
+- "Sin límites" solo pregunta una vez al día: si eliges sin límites para una app, el resto del día se abre directamente sin diálogo.
+
 ## 0.7.0
 
 - Seguimiento financiero automático: intercepta notificaciones de apps bancarias (BBVA, CaixaBank, Bizum, Fiare, Revolut y más) y genera un CSV diario en Documents/minilauncher-finances/ para sincronizar con Nextcloud.
